@@ -9,6 +9,7 @@ import { useSupabase } from "@/lib/useSupabase";
 import { useHideValues } from "@/lib/useHideValues";
 import { useCards } from "@/lib/useCards";
 import { dueDateFor, invoiceMonthFor, invoiceStatus, openInvoicesDue } from "@/lib/cards";
+import { allowance } from "@/lib/planning";
 import { InvoiceChip } from "@/components/CardBits";
 import { brl, currentMonth, monthRange, formatDateBR, daysUntil, todayISO } from "@/lib/format";
 import { Card, Progress, Empty, MonthNav } from "@/components/ui/page";
@@ -113,6 +114,11 @@ export default function DashboardPage() {
   const activeCards = cards.filter((c) => !c.archived && c.kind === "credito");
   const cardsDue = openInvoicesDue(activeCards, invoices, end, month === currentMonth() ? undefined : start);
   const projected = balanceNow + toReceive - toPay - cardsDue;
+  // "Quanto posso gastar hoje": mesma conta da tela Planejamento (saldo menos o que vence até o fim do mês, dividido pelos dias que faltam). Só no mês atual.
+  const showAllowance = month === currentMonth() && !day && (accounts.length > 0 || bills.length > 0 || activeCards.length > 0);
+  const al = showAllowance
+    ? allowance({ today: todayISO(), cash: balanceNow, bills: bills.map((b) => ({ ...b, recurrence: "none" as const })), cards: activeCards, invoices })
+    : null;
   const endLabel = formatDateBR(new Date(new Date(end + "T00:00:00").getTime() - 86_400_000).toISOString().slice(0, 10));
 
   const groupBy = (rows: { name: string; amount: number }[]) =>
@@ -161,6 +167,18 @@ export default function DashboardPage() {
           <p className="text-3xl md:text-4xl font-extrabold tracking-tight">{money(brl(balanceNow))}</p>
         </div>
       </div>
+
+      {al && (
+        <Link href="/planejamento" className="block rounded-[22px] bg-white/75 dark:bg-[#161616] border border-white/80 dark:border-white/5 p-4 mb-4 shadow-[0_8px_30px_rgba(91,91,240,0.06)] dark:shadow-none">
+          <p className="text-xs font-bold text-gray-500 dark:text-gray-400">Quanto posso gastar hoje</p>
+          <p className={`text-2xl font-extrabold mt-1 ${al.free < 0 ? "text-red-500" : ""}`}>
+            {money(brl(al.free < 0 ? 0 : al.perDay))}<span className="text-sm font-bold text-gray-400"> por dia</span>
+          </p>
+          <p className="text-[11px] text-gray-400 mt-0.5">
+            {al.free < 0 ? `Faltam ${money(brl(-al.free))} para cobrir o que vence até o fim do mês` : `Sobram ${money(brl(al.free))} até o fim do mês (${al.daysLeft} ${al.daysLeft === 1 ? "dia" : "dias"}), já descontando contas e faturas`}
+          </p>
+        </Link>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <Kpi icon={CircleDollarSign} label="Receita" value={money(brl(revenue))} tone="bg-emerald-500" />

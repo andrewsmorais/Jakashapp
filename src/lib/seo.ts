@@ -20,7 +20,7 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "O Jakash é gratuito?",
-    a: "O Jakash oferece 7 dias de teste grátis, sem cadastrar cartão de crédito. Depois disso, é preciso escolher um plano pago. Você pode cancelar a qualquer momento, sem multa.",
+    a: "O Jakash oferece 7 dias de teste grátis ao assinar pela App Store. Depois disso, a assinatura é cobrada pela Apple e você pode cancelar a qualquer momento, sem multa.",
   },
   {
     q: "Funciona com o meu banco?",

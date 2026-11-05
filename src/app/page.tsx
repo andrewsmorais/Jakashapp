@@ -3,13 +3,13 @@
 import { useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import Link from "next/link";
 import { CTAButton } from "@/components/CTAButton";
 import { FAQItem } from "@/components/FAQItem";
 import { SectionBadge } from "@/components/SectionBadge";
 import { PLANS, PLAN_FEATURES, PLAN_TAGLINE, planPrice, type PlanId } from "@/lib/plans";
 import { FAQS, homeJsonLd } from "@/lib/seo";
 import { JsonLd } from "@/components/JsonLd";
+import { APP_LOGIN_URL } from "@/lib/links";
 import {
   CalendarDays, StickyNote, Calculator, 
   CheckCircle2, Lock
@@ -67,11 +67,11 @@ export default function LandingPage() {
                 Lançamentos, contas a pagar, cartões e parcelas, lista de compras, dívidas, objetivos, MEI separado e família. Tudo num lugar só, com a Jaki, a assistente de IA do app, para tirar dúvidas sobre as suas finanças.
               </p>
               
-              <CTAButton text="Testar 7 dias grátis →" size="lg" className="h-16 px-10 text-lg w-full sm:w-auto" />
-              <p className="text-sm text-gray-400 font-medium mt-4">Sem precisar cadastrar cartão de crédito</p>
-              <Link href="/login" className="mt-3 inline-flex items-center justify-center h-12 px-8 rounded-full border-2 border-brand-dark text-brand-dark font-bold hover:bg-brand-dark/5 transition-colors w-full sm:w-auto">
-                Já tenho conta: entrar no app
-              </Link>
+              <CTAButton text="Baixar na App Store →" size="lg" className="h-16 px-10 text-lg w-full sm:w-auto" />
+              <p className="text-sm text-gray-400 font-medium mt-4">7 dias grátis na App Store. Cancele quando quiser.</p>
+              <a href={APP_LOGIN_URL} className="mt-3 inline-flex items-center justify-center h-12 px-8 rounded-full border-2 border-brand-dark text-brand-dark font-bold hover:bg-brand-dark/5 transition-colors w-full sm:w-auto">
+                Já tenho conta: entrar pelo computador
+              </a>
             </div>
 
             <div className="lg:w-1/2 w-full relative h-[600px] fade-in-section">
@@ -185,7 +185,7 @@ export default function LandingPage() {
               <p className="text-lg text-gray-500 font-medium mb-10 leading-relaxed">
                 Cadastre suas contas a pagar e seus cartões. O Jakash lembra você antes do vencimento, por aviso no aparelho ou e-mail. Você só decide.
               </p>
-              <CTAButton text="Testar 7 dias grátis →" />
+              <CTAButton text="Baixar na App Store →" />
             </div>
             
             <div className="lg:w-1/2 w-full relative h-[500px]">
@@ -269,7 +269,7 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <CTAButton text="Testar 7 dias grátis →" />
+              <CTAButton text="Baixar na App Store →" />
             </div>
           </div>
         </section>
@@ -297,7 +297,7 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <CTAButton text="Testar 7 dias grátis →" className="bg-white text-brand-dark hover:bg-gray-100" />
+              <CTAButton text="Baixar na App Store →" className="bg-white text-brand-dark hover:bg-gray-100" />
             </div>
 
             <div className="lg:w-1/2 w-full relative">
@@ -334,11 +334,11 @@ export default function LandingPage() {
                 <div className="h-32 flex items-center justify-center mb-6">
                   <div className="bg-gray-50 px-6 py-3 rounded-full font-mono font-bold text-lg border border-gray-100 flex items-center gap-3 text-gray-700">
                     <div className="w-8 h-8 rounded-full bg-brand-dark text-white flex items-center justify-center">J</div>
-                    Crie sua conta
+                    Baixe o app
                   </div>
                 </div>
                 <h3 className="font-bold text-xl mb-2 text-brand-dark">Passo 1</h3>
-                <p className="text-gray-500 font-medium">Cadastro rápido, com 7 dias grátis e sem cartão.</p>
+                <p className="text-gray-500 font-medium">Baixe na App Store e crie sua conta. Os primeiros 7 dias são grátis.</p>
               </div>
 
               <div className="bg-white rounded-[2rem] p-8 flex flex-col items-center shadow-sm">
@@ -364,7 +364,7 @@ export default function LandingPage() {
               </div>
             </div>
             
-            <CTAButton text="Testar 7 dias grátis →" size="lg" className="h-14 px-12 text-lg" />
+            <CTAButton text="Baixar na App Store →" size="lg" className="h-14 px-12 text-lg" />
           </div>
         </section>
 
@@ -375,7 +375,7 @@ export default function LandingPage() {
             <h2 className="text-4xl md:text-5xl font-bold mb-4">
               Escolha o plano <span className="text-brand-dark">do seu jeito</span>
             </h2>
-            <p className="text-gray-500 font-medium mb-12">7 dias grátis em qualquer plano, sem cadastrar cartão. Cancele quando quiser.</p>
+            <p className="text-gray-500 font-medium mb-12">7 dias grátis em qualquer plano. A assinatura é feita na App Store e você cancela quando quiser.</p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch text-left max-w-4xl mx-auto">
               {LANDING_PLANS.map((p) => (
@@ -399,14 +399,14 @@ export default function LandingPage() {
                       </li>
                     ))}
                   </ul>
-                  <CTAButton text="Começar teste grátis" className="w-full h-14" />
+                  <CTAButton text="Baixar e testar 7 dias grátis" className="w-full h-14" />
                 </div>
               ))}
             </div>
 
             <div className="mt-8 flex flex-col gap-1 text-xs text-gray-400 font-bold">
               <p>Cancele quando quiser, sem multa</p>
-              <p>Pagamento seguro via Asaas</p>
+              <p>Assinatura e pagamento pela App Store</p>
             </div>
           </div>
         </section>
@@ -432,12 +432,12 @@ export default function LandingPage() {
         <section className="py-32 px-6 bg-brand-dark text-white text-center rounded-t-[3rem] shadow-2xl relative z-20">
           <div className="max-w-3xl mx-auto fade-in-section">
             <h2 className="text-5xl md:text-6xl font-extrabold mb-6 tracking-tight">
-              7 dias grátis, sem cadastrar cartão
+              7 dias grátis, direto pela App Store
             </h2>
             <p className="text-xl text-white/70 mb-12 font-medium">
               Depois, a partir de {planPrice("cpf")}/mês. Cancele quando quiser, sem multa.
             </p>
-            <CTAButton text="Comece agora, é grátis →" size="lg" className="h-16 px-12 text-xl bg-brand-accent text-white hover:opacity-90" />
+            <CTAButton text="Baixe o app e comece grátis →" size="lg" className="h-16 px-12 text-xl bg-brand-accent text-white hover:opacity-90" />
             <p className="mt-12 text-sm text-white/50 font-bold">Jakash, feito no Brasil 🇧🇷</p>
           </div>
         </section>

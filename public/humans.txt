@@ -5,4 +5,4 @@ Instagram: https://www.instagram.com/jakashfinancas/
 Last update: 2026/10/15
 Language: Português (Brasil)
 Standards: HTML5, Schema.org JSON-LD
-Stack: Next.js, Supabase, Asaas
+Stack: Next.js

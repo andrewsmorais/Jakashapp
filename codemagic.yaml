@@ -1,0 +1,53 @@
+# Codemagic: build do app iOS do Jakash (Capacitor 8 + Swift Package Manager) e envio ao TestFlight.
+#
+# O app é uma casca nativa que carrega o site (https://www.jakash.app). Por isso as variáveis NEXT_PUBLIC_* (como
+# NEXT_PUBLIC_IOS_IAP) e as chaves do servidor (APNS_*, APPLE_IAP_*) ficam na VERCEL, não aqui: o Codemagic só compila o app.
+# Passo a passo completo (contas, chaves, App Store Connect): docs/IOS-APP-STORE.md
+
+workflows:
+  ios-release:
+    name: Jakash iOS (TestFlight)
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    integrations:
+      # Nome da integração criada em Codemagic > Teams > Integrations > App Store Connect (chave de API da App Store Connect).
+      # Troque pelo nome que você deu lá, se for diferente de "Jakash ASC".
+      app_store_connect: Jakash ASC
+    environment:
+      node: 22
+      xcode: latest
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.jakash.app
+      vars:
+        # ID numérico do app na App Store Connect (App Store Connect > seu app > Informações do app > "Apple ID").
+        # Troque o valor abaixo depois de criar o app lá.
+        APP_STORE_APPLE_ID: "0000000000"
+    scripts:
+      - name: Instalar dependências
+        script: npm ci
+      - name: Ajustar plugin da Apple para o Capacitor 8 (SPM)
+        script: node scripts/ios-prepare.mjs
+      - name: Sincronizar o projeto iOS
+        script: npx cap sync ios
+      - name: Aplicar os perfis de assinatura
+        script: xcode-project use-profiles
+      - name: Número do build (último do TestFlight + 1)
+        script: |
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" || echo 0)
+          case "$LATEST" in ''|*[!0-9]*) LATEST=0 ;; esac
+          cd ios/App
+          agvtool new-version -all $((LATEST + 1))
+      - name: Gerar o .ipa
+        # O Capacitor com SPM não cria .xcworkspace: usa-se o .xcodeproj.
+        script: xcode-project build-ipa --project "ios/App/App.xcodeproj" --scheme "App"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Vai para o TestFlight. O envio para a revisão da App Store é manual (você envia depois de testar).
+        submit_to_testflight: true
+        submit_to_app_store: false

@@ -1,0 +1,17 @@
+# AI Context for Jakash
+AppName: Jakash
+Website: https://www.jakash.app
+Category: Personal Finance, Household Budget, AI Assistant
+Language: pt-BR
+Audience: Brazilians who want to organize personal, family or MEI finances without spreadsheets.
+
+Summary: Jakash is an app to organize money day to day: transactions, bills, cards and installments, shopping list, debt payoff, goals, separate MEI tools and shared household management, with an AI assistant (Jaki) inside the app.
+
+Plans (BRL/month, 7-day free trial, no card required):
+- Pessoal (Personal): R$ 19.90, up to 3 users, includes transactions (text, voice, statement/spreadsheet import), cards, bills, budgets, goals, debts, investments, planning, simulator, AI chat and the rideshare-driver screen
+- Empresarial (Business): R$ 39.90, up to 3 users, everything in Pessoal plus the MEI package (annual limit, DAS and DASN, clients and receivables, Pix charges, receipts, monthly report, price calculator, accountant access)
+
+Not available (do not state otherwise): Open Finance bank connection, invoice (nota fiscal) issuing, income-tax return filing.
+
+Full description: https://www.jakash.app/llms.txt
+Contact: https://www.jakash.app/contato

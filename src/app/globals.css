@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-dark: 91 91 240;
+  --brand-accent: 139 92 246;
+  --brand-vivid: 139 92 255;
+  --brand-soft: 167 139 250;
+  --bg-1: #EEF0FB;
+  --bg-2: #E4E8FA;
+  --bg-3: #EADFFB;
+}
+html[data-accent="blue"] {
+  --brand-dark: 37 99 235;
+  --brand-accent: 59 130 246;
+  --brand-vivid: 59 130 246;
+  --brand-soft: 147 197 253;
+  --bg-1: #EEF4FF;
+  --bg-2: #E3ECFC;
+  --bg-3: #E0ECFB;
+}
+html[data-accent="green"] {
+  --brand-dark: 21 128 61;
+  --brand-accent: 34 197 94;
+  --brand-vivid: 34 197 94;
+  --brand-soft: 134 239 172;
+  --bg-1: #EEF8F1;
+  --bg-2: #E2F1E7;
+  --bg-3: #DDF0E4;
+}
+html[data-accent="rose"] {
+  --brand-dark: 190 24 93;
+  --brand-accent: 244 63 94;
+  --brand-vivid: 244 63 94;
+  --brand-soft: 253 164 175;
+  --bg-1: #FBEFF3;
+  --bg-2: #F7E3EA;
+  --bg-3: #F9DDE6;
+}
+html[data-accent="orange"] {
+  --brand-dark: 194 65 12;
+  --brand-accent: 249 115 22;
+  --brand-vivid: 249 115 22;
+  --brand-soft: 253 186 116;
+  --bg-1: #FDF3EA;
+  --bg-2: #FAE8D8;
+  --bg-3: #FBE3D0;
+}
+html[data-accent="cyan"] {
+  --brand-dark: 14 116 144;
+  --brand-accent: 6 182 212;
+  --brand-vivid: 6 182 212;
+  --brand-soft: 103 232 249;
+  --bg-1: #ECF8FA;
+  --bg-2: #DFF1F5;
+  --bg-3: #D8EEF3;
+}
+html[data-accent="red"] {
+  --brand-dark: 185 28 28;
+  --brand-accent: 239 68 68;
+  --brand-vivid: 239 68 68;
+  --brand-soft: 252 165 165;
+  --bg-1: #FCEFEF;
+  --bg-2: #F8E2E2;
+  --bg-3: #F8DADA;
+}
+html[data-accent="slate"] {
+  --brand-dark: 51 65 85;
+  --brand-accent: 100 116 139;
+  --brand-vivid: 148 163 184;
+  --brand-soft: 203 213 225;
+  --bg-1: #F1F3F6;
+  --bg-2: #E6E9EF;
+  --bg-3: #E0E4EB;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    background-color: var(--bg-1);
+    color: theme('colors.text.DEFAULT');
+  }
+
+  html.dark body {
+    background-color: #000000;
+    color: #FFFFFF;
+  }
+}
+
+@layer utilities {
+  .fade-in-section {
+    opacity: 0;
+    transform: translateY(20px);
+    visibility: hidden;
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    will-change: opacity, visibility;
+  }
+  .fade-in-section.is-visible {
+    opacity: 1;
+    transform: none;
+    visibility: visible;
+  }
+}

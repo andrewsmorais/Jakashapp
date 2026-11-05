@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Página Não Encontrada - Jakash</title>
+    <style>
+        :root {
+            --background: #0A0A0A;
+            --surface: #1A1A1A;
+            --primary: #8B5CF6;
+            --primary-dark: #00CC6A;
+            --text: #FFFFFF;
+            --text-secondary: #A0A0A0;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--background);
+            color: var(--text);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+        .emoji {
+            font-size: 5rem;
+            animation: float 3s ease-in-out infinite;
+            margin-bottom: 1rem;
+        }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+            100% { transform: translateY(0px); }
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin: 0 0 0.5rem 0;
+        }
+        p.subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin: 0 0 0.5rem 0;
+        }
+        p.code {
+            font-size: 0.9rem;
+            color: var(--primary);
+            font-weight: bold;
+            margin: 0 0 2rem 0;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        .buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 3rem;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.375rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background-color: var(--primary);
+            color: var(--background);
+        }
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+        }
+        .btn-outline {
+            background-color: transparent;
+            color: var(--text);
+            border: 1px solid var(--surface);
+        }
+        .btn-outline:hover {
+            background-color: var(--surface);
+        }
+        .contacts {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        .contacts a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+        .contacts a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="emoji">💸</div>
+    <h1>Página Não Encontrada</h1>
+    <p class="subtitle">Essa página saiu do orçamento! 😅</p>
+    <p class="code">Erro 404</p>
+    
+    <div class="buttons">
+        <a href="/" class="btn btn-primary">Voltar para Home</a>
+        <a href="/dashboard" class="btn btn-outline">Ir para o Dashboard</a>
+    </div>
+
+    <div class="contacts">
+        <p>Precisa de ajuda? Fale conosco:</p>
+        <p><a href="mailto:contato@jakash.app">contato@jakash.app</a></p>
+    </div>
+</body>
+</html>

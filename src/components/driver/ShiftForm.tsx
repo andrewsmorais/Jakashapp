@@ -119,6 +119,7 @@ export function ShiftForm({ supabase, userId, vehicles, editing, lastUsed, onSav
     return () => { alive = false; };
   }, [supabase, vehicleId, date, editing]);
 
+  const [showCustom, setShowCustom] = useState(false);
   function toggle(key: string) {
     if (earn[key]) {
       const next = { ...earn }; delete next[key];
@@ -132,7 +133,7 @@ export function ShiftForm({ supabase, userId, vehicles, editing, lastUsed, onSav
     if (!name) return;
     const key = platformKeyFromName(name);
     if (!earn[key]) toggle(key);
-    setCustom("");
+    setCustom(""); setShowCustom(false);
   }
 
   const earnings: Earning[] = order.filter((k) => earn[k]).map((k) => ({
@@ -234,14 +235,10 @@ export function ShiftForm({ supabase, userId, vehicles, editing, lastUsed, onSav
 
       <Card className="space-y-3">
         <p className="font-extrabold">Combustível</p>
-        <div className="flex flex-wrap gap-2">
-          {DAY_FUELS.map((f) => (
-            <button key={f} type="button" onClick={() => pickFuel(f)} aria-pressed={fuel === f}
-              className={`rounded-full px-3 py-1.5 text-xs font-bold ${fuel === f ? "bg-brand-dark text-white dark:bg-brand-vivid" : "bg-white/70 dark:bg-[#1E1E1E] text-gray-500"}`}>
-              {FUELS[f].label}
-            </button>
-          ))}
-        </div>
+        <div><Label>Tipo de combustível *</Label>
+          <select className={inputCls + ring("tipo de combustível")} value={fuel} onChange={(e) => pickFuel(e.target.value as DayFuel)}>
+            {DAY_FUELS.map((f) => <option key={f} value={f}>{FUELS[f].label}</option>)}
+          </select></div>
         <div className="grid grid-cols-2 gap-3">
           <div><Label>{FUELS[fuel].price} *</Label><input className={inputCls + ring("preço do combustível")} inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Ex.: 6,19" /></div>
           <div><Label>Consumo ({unit}) *</Label><input className={inputCls + ring("consumo (km/L)")} inputMode="decimal" value={efficiency} onChange={(e) => setEfficiency(e.target.value)} placeholder="Ex.: 12" /></div>
@@ -252,26 +249,20 @@ export function ShiftForm({ supabase, userId, vehicles, editing, lastUsed, onSav
 
       <Card className="space-y-3">
         <p className="font-extrabold">Fontes de ganho *</p>
-        <p className="text-xs text-gray-500 -mt-2">Marque uma ou mais plataformas do turno e informe o valor e a quantidade de cada uma.</p>
-        <div className={`flex flex-wrap gap-2 rounded-2xl ${bad("pelo menos uma fonte de ganho") ? "ring-2 ring-red-400 p-1" : ""}`}>
-          {PLATFORMS.map((p) => {
-            const on = Boolean(earn[p.key]);
-            return (
-              <button key={p.key} type="button" onClick={() => toggle(p.key)} aria-pressed={on}
-                className={`inline-flex items-center gap-2 rounded-full pl-1 pr-3 py-1 text-xs font-bold border ${on ? "border-brand-dark dark:border-brand-vivid bg-brand-dark/10 dark:bg-brand-vivid/20" : "border-gray-200 dark:border-white/10 text-gray-500"}`}>
-                <PlatformBadge platform={p.key} size={24} /> {p.name}
-              </button>
-            );
-          })}
-          {order.filter((k) => !PLATFORMS.some((p) => p.key === k)).map((k) => (
-            <button key={k} type="button" onClick={() => toggle(k)} aria-pressed className="inline-flex items-center gap-2 rounded-full pl-1 pr-3 py-1 text-xs font-bold border border-brand-dark dark:border-brand-vivid bg-brand-dark/10 dark:bg-brand-vivid/20">
-              <PlatformBadge platform={k} size={24} /> {platformOf(k).name} <X size={12} />
-            </button>
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <input className={inputCls} value={custom} onChange={(e) => setCustom(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustom(); } }} placeholder="Outra plataforma (ex.: Loggi)" maxLength={30} />
-          <button type="button" onClick={addCustom} className={btnGhostCls + " shrink-0"}><Plus size={14} /> Incluir</button>
+        <p className="text-xs text-gray-500 -mt-2">Adicione quantas fontes quiser no dia (Uber, 99, InDrive...). O lucro bruto é a soma de todas.</p>
+        <div className={`space-y-2 rounded-2xl ${bad("pelo menos uma fonte de ganho") ? "ring-2 ring-red-400 p-1" : ""}`}>
+          <select className={inputCls} value="" aria-label="Adicionar fonte de ganho"
+            onChange={(e) => { const v = e.target.value; if (v === "__outra") setShowCustom(true); else if (v) toggle(v); }}>
+            <option value="">{order.length ? "+ Adicionar outra fonte de ganho" : "Selecionar fonte de ganho"}</option>
+            {PLATFORMS.filter((p) => !earn[p.key]).map((p) => <option key={p.key} value={p.key}>{p.name}</option>)}
+            <option value="__outra">Outra plataforma…</option>
+          </select>
+          {showCustom && (
+            <div className="flex gap-2">
+              <input autoFocus className={inputCls} value={custom} onChange={(e) => setCustom(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustom(); } }} placeholder="Nome da plataforma (ex.: Loggi)" maxLength={30} />
+              <button type="button" onClick={addCustom} className={btnGhostCls + " shrink-0"}><Plus size={14} /> Incluir</button>
+            </div>
+          )}
         </div>
 
         {order.filter((k) => earn[k]).map((k) => {
@@ -279,7 +270,7 @@ export function ShiftForm({ supabase, userId, vehicles, editing, lastUsed, onSav
           const lacks = bad("valor ganho e quantidade em cada fonte");
           return (
             <div key={k} className="rounded-2xl border border-white/70 dark:border-white/5 p-3">
-              <div className="flex items-center gap-2 mb-2"><PlatformBadge platform={k} size={26} /><span className="font-bold text-sm">{platformOf(k).name}</span></div>
+              <div className="flex items-center gap-2 mb-2"><PlatformBadge platform={k} size={26} /><span className="font-bold text-sm flex-1">{platformOf(k).name}</span><button type="button" onClick={() => toggle(k)} aria-label={`Remover ${platformOf(k).name}`} className="text-gray-400 p-1"><X size={16} /></button></div>
               <div className="grid grid-cols-3 gap-2">
                 <div><Label>Valor ganho *</Label><input className={inputCls + (lacks && !(money(d.amount) > 0) ? " !border-red-400" : "")} inputMode="decimal" value={d.amount} onChange={(e) => setEarn({ ...earn, [k]: { ...d, amount: e.target.value } })} placeholder="0,00" /></div>
                 <div><Label>{quantityLabel(k)} *</Label><input className={inputCls + (lacks && !(money(d.trips) > 0) ? " !border-red-400" : "")} inputMode="numeric" value={d.trips} onChange={(e) => setEarn({ ...earn, [k]: { ...d, trips: e.target.value.replace(/\D/g, "").slice(0, 4) } })} placeholder="0" /></div>

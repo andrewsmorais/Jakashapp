@@ -143,7 +143,7 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
     if (useCard && !card) { setError("Escolha o cartão."); return; }
     if (useDebit && (!debit || !debit.pay_account_id)) { setError(debit ? "Este cartão de débito está sem conta vinculada. Edite o cartão e escolha a conta." : "Escolha o cartão de débito."); return; }
     const doRepeat = f.repeat && !useCard && f.count >= 2;
-    if (f.repeat && !useCard && (!Number.isInteger(f.count) || f.count < 2 || f.count > 60)) { setError("Em Repetir, informe de 2 a 60 lançamentos."); return; }
+    if (f.repeat && !useCard && (!Number.isInteger(f.count) || f.count < 2 || f.count > 60)) { setError("Em Repetir, informe de 2 a 60 vezes."); return; }
     setSaving(true);
     // Só vai na gravação quando escolhido (assim nada muda para quem não usa fornecedores).
     const sup = showSupplier && f.supplier_id && suppliers.some((x) => x.id === f.supplier_id) ? { supplier_id: f.supplier_id } : {};
@@ -210,7 +210,7 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
   const subs = typeCats.filter((c) => c.parent_id === parentId).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
   const subId = cats.find((c) => c.id === f.category_id)?.parent_id ? f.category_id : "";
   const accountMode = !useCard && !useDebit;
-  const verbDate = isIncome ? "Recebimento" : "Pagamento";
+  const verbDate = isIncome ? "recebi" : "paguei";
   const rowCls = "flex items-center justify-between gap-3 px-4 py-3.5";
   const hint = "text-xs text-gray-500 dark:text-gray-400 mt-0.5";
 
@@ -309,29 +309,29 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
               )}
               <div className="rounded-2xl border border-gray-200 dark:border-white/10 divide-y divide-gray-200 dark:divide-white/10">
                 <div className={rowCls}>
-                  <div className="min-w-0"><p className="flex items-center gap-2 font-bold"><CheckCircle2 size={18} className="text-emerald-600" />{isIncome ? "Foi Recebida" : "Foi Pago"}</p><p className={hint}>Status do pagamento/recebimento</p></div>
-                  <Switch on={f.paid} onChange={(v) => setF({ ...f, paid: v })} label={isIncome ? "Foi recebida" : "Foi pago"} />
+                  <div className="min-w-0"><p className="flex items-center gap-2 font-bold"><CheckCircle2 size={18} className="text-emerald-600" />{isIncome ? "Já recebi" : "Já paguei"}</p><p className={hint}>{isIncome ? "Desligue se ainda vai receber" : "Desligue se ainda vai pagar"}</p></div>
+                  <Switch on={f.paid} onChange={(v) => setF({ ...f, paid: v })} label={isIncome ? "Já recebi" : "Já paguei"} />
                 </div>
                 <div className="px-4 py-3.5">
-                  <Label>{f.paid ? `Data do ${verbDate}` : "Vencimento"}</Label>
+                  <Label>{f.paid ? `Dia em que ${verbDate}` : "Dia que vence"}</Label>
                   <input type="date" className={inputCls + hl("date")} value={f.date} onChange={(e) => { setF({ ...f, date: e.target.value }); unmark("date"); }} />
                 </div>
                 {f.paid && (
                   <div className="px-4 py-3.5">
                     <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0"><p className="font-bold">Vencimento no mesmo dia</p><p className={hint}>{f.sameDue ? `Venc. ${formatDateBR(f.date)}` : "Informe o vencimento abaixo"}</p></div>
-                      <Switch on={f.sameDue} onChange={(v) => setF({ ...f, sameDue: v })} label="Vencimento no mesmo dia" />
+                      <div className="min-w-0"><p className="font-bold">Vence no mesmo dia</p><p className={hint}>{f.sameDue ? `Vence em ${formatDateBR(f.date)}` : "Escolha o dia que vence"}</p></div>
+                      <Switch on={f.sameDue} onChange={(v) => setF({ ...f, sameDue: v })} label="Vence no mesmo dia" />
                     </div>
-                    {!f.sameDue && <input type="date" aria-label="Vencimento" className={inputCls + " mt-3"} value={f.due} onChange={(e) => setF({ ...f, due: e.target.value })} />}
+                    {!f.sameDue && <input type="date" aria-label="Dia que vence" className={inputCls + " mt-3"} value={f.due} onChange={(e) => setF({ ...f, due: e.target.value })} />}
                   </div>
                 )}
                 {f.paid && (
                   <div className="px-4 py-3.5">
                     <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0"><p className="font-bold">Data de Competência</p><p className={hint}>{f.compOn ? "Mês a que o lançamento pertence" : `Usaremos a data do ${verbDate.toLowerCase()}: ${formatDateBR(f.date)}`}</p></div>
-                      <Switch on={f.compOn} onChange={(v) => setF({ ...f, compOn: v })} label="Data de competência" />
+                      <div className="min-w-0"><p className="font-bold">Contar em outro mês</p><p className={hint}>{f.compOn ? "Escolha o mês em que entra nas suas contas" : `Vai contar em ${formatDateBR(f.date)}, o dia em que ${verbDate}`}</p></div>
+                      <Switch on={f.compOn} onChange={(v) => setF({ ...f, compOn: v })} label="Contar em outro mês" />
                     </div>
-                    {f.compOn && <input type="date" aria-label="Data de competência" className={inputCls + " mt-3"} value={f.comp} onChange={(e) => setF({ ...f, comp: e.target.value })} />}
+                    {f.compOn && <input type="date" aria-label="Contar em outro mês" className={inputCls + " mt-3"} value={f.comp} onChange={(e) => setF({ ...f, comp: e.target.value })} />}
                   </div>
                 )}
               </div>
@@ -342,26 +342,26 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
           {!useCard && (
             <div className="rounded-2xl border border-gray-200 dark:border-white/10 divide-y divide-gray-200 dark:divide-white/10">
               <div className={rowCls}>
-                <div className="min-w-0"><p className="flex items-center gap-2 font-bold"><Pin size={18} className="text-gray-400" />{isIncome ? "Receita Fixa" : "Despesa Fixa"}</p><p className={hint}>Classifica como {isIncome ? "uma receita fixa" : "uma despesa fixa"}</p></div>
-                <Switch on={f.fixed} onChange={(v) => setF({ ...f, fixed: v })} label={isIncome ? "Receita fixa" : "Despesa fixa"} />
+                <div className="min-w-0"><p className="flex items-center gap-2 font-bold"><Pin size={18} className="text-gray-400" />{isIncome ? "Receita recorrente" : "Despesa recorrente"}</p><p className={hint}>{isIncome ? "Chega sempre, como o salário" : "Sempre existe, como o aluguel"}</p></div>
+                <Switch on={f.fixed} onChange={(v) => setF({ ...f, fixed: v })} label={isIncome ? "Receita recorrente" : "Despesa recorrente"} />
               </div>
               <div className="px-4 py-3.5">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0"><p className="flex items-center gap-2 font-bold"><Repeat size={18} className="text-gray-400" />Repetir Transação</p><p className={hint}>Criar várias de uma vez</p></div>
-                  <Switch on={f.repeat} onChange={(v) => setF({ ...f, repeat: v })} label="Repetir transação" />
+                  <div className="min-w-0"><p className="flex items-center gap-2 font-bold"><Repeat size={18} className="text-gray-400" />Repetir nos próximos meses</p><p className={hint}>Lança de uma vez, como Netflix ou aluguel</p></div>
+                  <Switch on={f.repeat} onChange={(v) => setF({ ...f, repeat: v })} label="Repetir lançamento" />
                 </div>
                 {f.repeat && (
                   <>
                     <div className="grid grid-cols-2 gap-3 mt-3">
-                      <div><Label>Frequência</Label>
+                      <div><Label>De quanto em quanto tempo</Label>
                         <select className={inputCls} value={f.freq} onChange={(e) => setF({ ...f, freq: e.target.value as typeof f.freq })}>
                           <option value="monthly">Todo mês</option><option value="weekly">Toda semana</option><option value="yearly">Todo ano</option>
                         </select></div>
-                      <div><Label>Quantidade</Label>
+                      <div><Label>Quantas vezes</Label>
                         <input className={inputCls} inputMode="numeric" value={String(f.count)} onChange={(e) => setF({ ...f, count: Number(e.target.value.replace(/\D/g, "")) || 0 })} /></div>
                     </div>
                     <p className="text-xs text-gray-500 mt-2">
-                      {f.paid || useDebit ? "O primeiro entra agora; os outros ficam em Contas a pagar/receber, nas datas seguintes." : "Cada data vira uma conta a pagar/receber."}
+                      {f.paid || useDebit ? "O primeiro entra agora; os outros ficam em Contas a pagar e receber, nas datas seguintes." : "Cada data vira uma conta a pagar/receber."}
                     </p>
                   </>
                 )}
@@ -369,11 +369,11 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
             </div>
           )}
 
-          <div><Label>Pessoa Responsável</Label>
-            <select className={inputCls} value="me" onChange={() => undefined} aria-label="Pessoa responsável">
+          <div><Label>De quem é</Label>
+            <select className={inputCls} value="me" onChange={() => undefined} aria-label="De quem é">
               <option value="me">{myName || "Você"}</option>
             </select>
-            <p className="text-xs text-gray-500 mt-1">Quem lança é o dono do lançamento; na gestão compartilhada, cada um vê de quem é.</p>
+            <p className="text-xs text-gray-500 mt-1">O lançamento fica no seu nome.</p>
           </div>
 
           {(isMei || f.biz) && (useCard || useDebit || f.paid) && (

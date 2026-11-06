@@ -6,16 +6,18 @@ import { useSupabase } from "@/lib/useSupabase";
 import { useCards } from "@/lib/useCards";
 import { useUsageType } from "@/lib/useUsageType";
 import { useHideValues } from "@/lib/useHideValues";
-import { brl, monthRange, parseMoney, todayISO } from "@/lib/format";
+import { brl, formatDateBR, monthRange, parseMoney, todayISO } from "@/lib/format";
 import { invoiceMonthFor } from "@/lib/cards";
 import { rootId, type CatRow } from "@/lib/categories";
 import { loadCategoryState, visibleCats } from "@/lib/categoryVisibility";
 import { detectVoiceMethod, startVoice, voiceErrorText, type VoiceMethod, type VoiceSession } from "@/lib/voiceInput";
 import { shrinkImage } from "@/lib/fileImport";
 import { budgetLeft, compareReceipt, goalStatus, itemTotal, listTotals, parseShoppingInput, quantityLabel, suggestNames, type ReceiptItem, type ShopItem } from "@/lib/shopping";
+import { ShoppingReport } from "@/components/ShoppingReport";
 import { BackTitle, Card, Empty, ErrorNote, Label, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
 
-type ListRow = { id: string; user_id: string; name: string; is_business: boolean; created_at: string };
+type ListRow = { id: string; user_id: string; name: string; is_business: boolean; created_at: string; list_date: string };
+const LIST_COLS = "id,user_id,name,is_business,created_at,list_date";
 type Acc = { id: string; name: string };
 type Op = { v: number; insert?: ShopItem; patch?: Partial<ShopItem>; del?: boolean };
 
@@ -28,6 +30,12 @@ export default function SupermercadoPage() {
   const { money } = useHideValues();
   const [scope, setScope] = useState<"pessoal" | "empresa">("pessoal");
   const [list, setList] = useState<ListRow | null>(null);
+  const [lists, setLists] = useState<ListRow[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [view, setView] = useState<"comprar" | "relatorio">("comprar");
+  const [newOpen, setNewOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newDate, setNewDate] = useState(todayISO());
   const [items, setItems] = useState<ShopItem[]>([]);
   const [history, setHistory] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,15 +109,17 @@ export default function SupermercadoPage() {
   const load = useCallback(async () => {
     if (!userId) return;
     const isBiz = scope === "empresa";
-    const { data: lists, error: le } = await supabase.from("shopping_lists").select("id,user_id,name,is_business,created_at")
-      .eq("status", "open").eq("is_business", isBiz).order("created_at").limit(1);
+    const { data: open, error: le } = await supabase.from("shopping_lists").select(LIST_COLS)
+      .eq("status", "open").eq("is_business", isBiz).order("list_date", { ascending: false }).order("created_at", { ascending: false }).limit(50);
     if (le) { setError("Não foi possível carregar a lista. Tente de novo em instantes."); setLoading(false); return; }
-    let cur = ((lists ?? []) as ListRow[])[0];
-    if (!cur) {
-      const ins = await supabase.from("shopping_lists").insert({ user_id: userId, name: isBiz ? "Empresa" : "Mercado", is_business: isBiz }).select("id,user_id,name,is_business,created_at").single();
+    let all = (open ?? []) as ListRow[];
+    if (all.length === 0) {
+      const ins = await supabase.from("shopping_lists").insert({ user_id: userId, name: isBiz ? "Empresa" : "Mercado", is_business: isBiz }).select(LIST_COLS).single();
       if (ins.error || !ins.data) { setError("Não foi possível criar a lista."); setLoading(false); return; }
-      cur = ins.data as ListRow;
+      all = [ins.data as ListRow];
     }
+    const cur = all.find((x) => x.id === selectedId) ?? all[0];
+    setLists(all);
     const [it, hist] = await Promise.all([
       supabase.from("shopping_items").select("id,list_id,created_by,name,quantity,unit,est_price,checked,position").eq("list_id", cur.id).order("position").order("created_at"),
       supabase.from("shopping_items").select("name").order("created_at", { ascending: false }).limit(400),
@@ -132,7 +142,7 @@ export default function SupermercadoPage() {
     setHistory(((hist.data ?? []) as { name: string }[]).map((x) => x.name));
     setError(null);
     setLoading(false);
-  }, [supabase, userId, scope]);
+  }, [supabase, userId, scope, selectedId]);
 
   useEffect(() => { if (ready && userId) load(); }, [ready, userId, load]);
   useEffect(() => {
@@ -164,6 +174,32 @@ export default function SupermercadoPage() {
       setFoodSpent(((t.data ?? []) as { amount: number | string; category_id: string | null }[]).filter((x) => rootId(cl, x.category_id) === food.id).reduce((s, x) => s + Number(x.amount), 0));
     })();
   }, [ready, userId, supabase, done]);
+
+  function pickList(id: string) {
+    if (id === list?.id) return;
+    setLoading(true); setItems([]); setReceipt(null); setGoal(null); setSelectedId(id);
+  }
+
+  async function createList(e: React.FormEvent) {
+    e.preventDefault();
+    if (!userId) return;
+    const name = newName.trim().replace(/\s+/g, " ");
+    if (name.length < 1) { setError("Dê um nome para a lista (ex.: Compra do Atacadão)."); return; }
+    const { data, error: err } = await supabase.from("shopping_lists").insert({ user_id: userId, name: name.slice(0, 60), list_date: newDate || todayISO(), is_business: scope === "empresa" }).select(LIST_COLS).single();
+    if (err || !data) { setError("Não foi possível criar a lista."); return; }
+    setError(null); setNewOpen(false); setNewName(""); setNewDate(todayISO());
+    setLoading(true); setItems([]); setReceipt(null); setGoal(null);
+    setSelectedId((data as ListRow).id);
+  }
+
+  async function saveListInfo(patchRow: { name?: string; list_date?: string }) {
+    if (!list) return;
+    const { error: err } = await supabase.from("shopping_lists").update(patchRow).eq("id", list.id);
+    if (err) { setError("Não foi possível salvar a lista."); return; }
+    setError(null);
+    setList({ ...list, ...patchRow });
+    setLists((cur) => cur.map((x) => (x.id === list.id ? { ...x, ...patchRow } : x)));
+  }
 
   function add(e: React.FormEvent) {
     e.preventDefault();
@@ -287,6 +323,7 @@ export default function SupermercadoPage() {
     const res = data as { transaction_id: string | null; leftover_list_id: string | null; already: boolean };
     setFinishing(false);
     setReceipt(null);
+    setSelectedId(null);
     setStep(1);
     setDone(res.already ? "Esta compra já tinha sido finalizada." : amount > 0 ? `Compra registrada: ${brl(amount)}.${res.leftover_list_id ? " O que faltou passou para a próxima lista." : ""}` : `Lista encerrada.${res.leftover_list_id ? " O que faltou passou para a próxima lista." : ""}`);
     window.dispatchEvent(new Event("jakash:changed"));
@@ -351,6 +388,47 @@ export default function SupermercadoPage() {
       {waiting > 0 && (
         <p className="mb-3 flex items-center gap-2 text-xs font-bold text-amber-600 dark:text-amber-400"><CloudOff size={14} /> Sem sinal por enquanto. {waiting} alteração(ões) serão salvas assim que voltar.</p>
       )}
+
+      <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#161616] mb-4" role="tablist" aria-label="Supermercado">
+        {([["comprar", "Minhas listas"], ["relatorio", "Relatório"]] as const).map(([k, l]) => (
+          <button key={k} type="button" role="tab" aria-selected={view === k} onClick={() => setView(k)} className={`py-2.5 rounded-xl text-sm font-bold ${view === k ? "bg-white dark:bg-[#262626] shadow-sm" : "text-gray-500"}`}>{l}</button>
+        ))}
+      </div>
+
+      {view === "relatorio" && <ShoppingReport supabase={supabase} isBiz={scope === "empresa"} money={money} />}
+
+      {view === "comprar" && (<>
+      <Card className="mb-4 !p-4 space-y-3">
+        <div>
+          <Label>Lista</Label>
+          <select className={inputCls} value={list?.id ?? ""} onChange={(e) => pickList(e.target.value)} aria-label="Escolher a lista">
+            {lists.map((x) => <option key={x.id} value={x.id}>{x.name} · {formatDateBR(x.list_date)}</option>)}
+          </select>
+        </div>
+        {step === 1 && list && (
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>Nome da lista</Label><input key={`n-${list.id}`} className={inputCls} defaultValue={list.name} maxLength={60} placeholder="Ex.: Compra do Atacadão"
+              onBlur={(e) => { const v = e.target.value.trim().replace(/\s+/g, " "); if (v && v !== list.name) void saveListInfo({ name: v.slice(0, 60) }); else if (!v) e.target.value = list.name; }} /></div>
+            <div><Label>Data da compra</Label><input key={`d-${list.id}`} type="date" className={inputCls} defaultValue={list.list_date}
+              onBlur={(e) => { const v = e.target.value; if (v && v !== list.list_date) void saveListInfo({ list_date: v }); }} /></div>
+          </div>
+        )}
+        {newOpen ? (
+          <form onSubmit={createList} className="space-y-3 rounded-2xl border border-white/70 dark:border-white/5 p-3">
+            <p className="text-sm font-extrabold">Nova lista</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Nome *</Label><input autoFocus className={inputCls} value={newName} onChange={(e) => setNewName(e.target.value)} maxLength={60} placeholder="Ex.: Feira de sábado" /></div>
+              <div><Label>Data</Label><input type="date" className={inputCls} value={newDate} onChange={(e) => setNewDate(e.target.value)} /></div>
+            </div>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => { setNewOpen(false); setError(null); }} className={btnGhostCls + " flex-1 !py-2.5"}>Cancelar</button>
+              <button type="submit" className={btnCls + " flex-1 !py-2.5"}>Criar lista</button>
+            </div>
+          </form>
+        ) : (
+          <button type="button" onClick={() => { setNewOpen(true); setStep(1); }} className="text-sm font-bold text-brand-dark dark:text-brand-soft">+ Nova lista</button>
+        )}
+      </Card>
 
       <nav className="grid grid-cols-4 gap-1.5 mb-5" aria-label="Etapas da compra">
         {STEPS.map(([n, l]) => (
@@ -508,6 +586,8 @@ export default function SupermercadoPage() {
           <p className="text-[11px] text-gray-500 mt-2 text-center">O que você não pegou passa para a próxima lista.</p>
         </Card>
       )}
+
+      </>)}
 
       {finishing && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setFinishing(false)}>

@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { addDays, type CardCfg } from '@/lib/cards';
 import { brl } from '@/lib/format';
 import {
-  billItems, buildReminder, cardItems, finalInstallmentItems, meiItems, offsetFor, targetDateFor, todayInSaoPaulo,
+  billItems, buildReminder, cardItems, finalInstallmentItems, offsetFor, targetDateFor, todayInSaoPaulo,
   type BillLite, type CardDueRow, type DueItem, type InstallmentLite,
 } from '@/lib/reminders';
 import { pushConfigured, sendPush } from '@/lib/push';
@@ -151,10 +151,7 @@ export async function GET(request: Request) {
         ...billItems(members.flatMap((m) => billsBy.get(m) ?? []), target),
         ...cardItems(members.flatMap((m) => cardsBy.get(m) ?? []), target),
         ...finalInstallmentItems(members.flatMap((m) => lastBy.get(m) ?? []), cfgs, target),
-        // Obrigações do MEI (relatório mensal, DAS sem conta agendada, DASN-SIMEI): só para quem usa o app para a empresa.
-        ...(p.usage_type === 'empresarial' || p.usage_type === 'ambos'
-          ? meiItems(target, (billsBy.get(p.id) ?? []).some((b) => b.type === 'expense' && b.due_date === target && /^das/i.test(b.description)))
-          : []),
+        // Obrigações do MEI: desligadas (desde 06/11/2026 o app é só para uso pessoal).
       ];
       const reminder = buildReminder(items, offset, target);
       if (!reminder) return;

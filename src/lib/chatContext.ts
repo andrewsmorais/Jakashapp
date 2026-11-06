@@ -103,7 +103,7 @@ export async function buildChatContext(db: SupabaseClient, today: string, who?: 
   const roots = (type: 'income' | 'expense') => cats.filter((x) => x.type === type && !x.parent_id && !hidden.has(x.id)).map((x) => x.name);
 
   const prof = pf.data as { usage_type: string; mei_activity: string; mei_opened_on: string | null; mei_annual_limit: number | string } | null;
-  const isMei = prof?.usage_type === 'empresarial' || prof?.usage_type === 'ambos';
+  const isMei = false as boolean; // app só pessoal desde 06/11/2026: a Jaki não recebe dados de MEI
   const mei = isMei && prof ? await meiContext(db, today, prof) : null;
 
   // Motorista de app: turnos do mês (só aparece para quem registrou turno).

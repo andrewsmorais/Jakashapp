@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Bell, Building2, Briefcase, Check, Landmark, Plus, Trash2, User, Users } from "lucide-react";
+import { ArrowRight, Bell, Check, Landmark, Plus, Trash2, User, Users } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { useSettings } from "@/contexts/SettingsContext";
 import { brl, parseMoney } from "@/lib/format";
@@ -23,8 +23,6 @@ const LANGS: { id: Lang; label: string; flag: string }[] = [
 const USAGES: { id: Usage; label: string; desc: string; icon: typeof User }[] = [
   { id: "pessoal", label: "Uso pessoal", desc: "Organizar as finanças do dia a dia.", icon: User },
   { id: "casal", label: "Casal", desc: "Cuidar do dinheiro junto com seu parceiro(a).", icon: Users },
-  { id: "empresarial", label: "MEI / Negócio", desc: "Controlar as finanças do seu negócio.", icon: Building2 },
-  { id: "ambos", label: "Pessoal e negócio", desc: "Separar o pessoal do negócio.", icon: Briefcase },
 ];
 const WHEN = [
   { id: "on_due", label: "No dia do vencimento" },
@@ -236,7 +234,7 @@ export default function OnboardingPage() {
         {step === 5 && (
           <>
             <h1 className="text-2xl font-extrabold mb-1">Você tem alguma <span className="rounded-lg bg-red-500/20 px-1.5">despesa fixa</span>?</h1>
-            <p className="text-gray-500 text-sm mb-5">Inclua contas que se repetem todo mês, como aluguel, internet e assinaturas{usage === "empresarial" || usage === "ambos" ? " (e o DAS do MEI)" : ""}.</p>
+            <p className="text-gray-500 text-sm mb-5">Inclua contas que se repetem todo mês, como aluguel, internet e assinaturas.</p>
             <FixedStep kind="expense" items={expenses} setItems={setExpenses} />
           </>
         )}

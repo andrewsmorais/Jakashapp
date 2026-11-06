@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useSupabase } from "@/lib/useSupabase";
 
-// Tipo de uso do perfil. O pacote MEI aparece para quem usa o app para a empresa ("empresarial" ou "ambos").
+// Tipo de uso do perfil. Desde 06/11/2026 o app é só para uso pessoal: nada de empresa/MEI aparece (isMei é sempre false),
+// mesmo para quem tinha escolhido "empresarial" ou "ambos" antes.
 export function useUsageType() {
   const { supabase, userId, ready } = useSupabase();
   const [usage, setUsage] = useState<string | null>(null);
@@ -17,5 +18,5 @@ export function useUsageType() {
     return () => { off = true; };
   }, [ready, userId, supabase]);
 
-  return { usage, isMei: usage === "empresarial" || usage === "ambos" };
+  return { usage, isMei: false as boolean };
 }

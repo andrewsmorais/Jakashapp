@@ -70,7 +70,6 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
     if (item.description) touched.push("description");
     if (cat) touched.push("category");
     if (item.date) touched.push("date");
-    if (item.isBusiness !== null) touched.push("biz");
     setVoiceFields(touched);
     setF((p) => ({
       ...p,
@@ -79,7 +78,7 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
       description: item.description || p.description,
       category_id: cat ? cat.id : type !== p.type ? "" : p.category_id,
       date: item.date ?? p.date,
-      biz: item.isBusiness ?? p.biz,
+      biz: false, // app só pessoal: "da empresa" dito na voz é ignorado
     }));
   }
 
@@ -107,7 +106,7 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
         ...p, date: todayISO(), installments: 1, kind: activity, draw: false, supplier_id: "",
         fixed: false, sameDue: true, due: todayISO(), compOn: false, comp: todayISO(), repeat: false, count: 12,
         ...(preset?.cardId && list.some((x) => x.id === preset.cardId)
-          ? { type: "expense" as const, method: "card" as const, card_id: preset.cardId, biz: Boolean(list.find((x) => x.id === preset.cardId)?.is_business) }
+          ? { type: "expense" as const, method: "card" as const, card_id: preset.cardId, biz: false }
           : { method: "account" as const, card_id: credits.length === 1 ? credits[0].id : "", biz: false }),
       }));
       // Abriu pelo "Também entendi" da voz: já vem preenchido (e o resto da fila segue depois de salvar).
@@ -275,7 +274,7 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
             <>
               <div className="grid grid-cols-2 gap-3">
                 <div><Label>Cartão</Label>
-                  <select className={inputCls} value={f.card_id} onChange={(e) => setF({ ...f, card_id: e.target.value, biz: Boolean(cards.find((c) => c.id === e.target.value)?.is_business) || f.biz })}>
+                  <select className={inputCls} value={f.card_id} onChange={(e) => setF({ ...f, card_id: e.target.value, biz: false })}>
                     <option value="">Escolher</option>
                     {creditCards.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select></div>
@@ -291,7 +290,7 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
           ) : useDebit ? (
             <>
               <div><Label>Cartão de débito</Label>
-                <select className={inputCls} value={f.card_id} onChange={(e) => setF({ ...f, card_id: e.target.value, biz: Boolean(debitCards.find((c) => c.id === e.target.value)?.is_business) || f.biz })}>
+                <select className={inputCls} value={f.card_id} onChange={(e) => setF({ ...f, card_id: e.target.value, biz: false })}>
                   <option value="">Escolher</option>
                   {debitCards.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select></div>
@@ -302,7 +301,7 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
             <>
               {accs.length > 0 && f.paid && (
                 <div><Label>Conta</Label>
-                  <select className={inputCls} value={f.account_id} onChange={(e) => setF({ ...f, account_id: e.target.value, biz: Boolean(accs.find((a) => a.id === e.target.value)?.is_business) || f.biz })}>
+                  <select className={inputCls} value={f.account_id} onChange={(e) => setF({ ...f, account_id: e.target.value, biz: false })}>
                     <option value="">Conta principal</option>
                     {accs.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                   </select></div>

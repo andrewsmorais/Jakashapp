@@ -103,7 +103,7 @@ export default function TransacoesPage() {
   const scoped = txs
     .filter((t) => !shared || who === "all" || (who === "me" ? t.user_id === userId : t.user_id === who))
     .filter((t) => scope === "all" || (scope === "pj") === t.is_business);
-  const showScope = isMei || txs.some((t) => t.is_business);
+  const showScope = isMei; // app só pessoal: sem filtro Pessoal/Empresa
   const shown = scoped.filter((t) => filter === "all" || t.type === filter);
   const income = scoped.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
   const expense = scoped.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
@@ -169,7 +169,7 @@ export default function TransacoesPage() {
               <li key={t.id} className="flex items-center justify-between gap-3 py-3">
                 <div className="min-w-0 flex-1">
                   <p className="font-bold truncate">{t.description}</p>
-                  <p className="text-xs text-gray-500 flex items-center gap-1.5 flex-wrap">{formatDateBR(t.date)} · {catName(t.category_id)}{(t.card_id || t.debit_card_id) && <span className="inline-flex items-center gap-1 rounded-full bg-brand-dark/10 dark:bg-[#262626] px-2 py-0.5 text-[10px] font-bold text-brand-dark dark:text-brand-soft"><CreditCard size={10} />{cardNames[(t.card_id ?? t.debit_card_id) as string] ?? "Cartão"}{t.debit_card_id ? " (débito)" : ""}</span>}{t.is_business && <span className="inline-flex rounded-full bg-amber-100 dark:bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300">Empresa</span>}<WhoBadge name={nameOf(t.user_id)} /></p>
+                  <p className="text-xs text-gray-500 flex items-center gap-1.5 flex-wrap">{formatDateBR(t.date)} · {catName(t.category_id)}{(t.card_id || t.debit_card_id) && <span className="inline-flex items-center gap-1 rounded-full bg-brand-dark/10 dark:bg-[#262626] px-2 py-0.5 text-[10px] font-bold text-brand-dark dark:text-brand-soft"><CreditCard size={10} />{cardNames[(t.card_id ?? t.debit_card_id) as string] ?? "Cartão"}{t.debit_card_id ? " (débito)" : ""}</span>}<WhoBadge name={nameOf(t.user_id)} /></p>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <span className={`font-bold whitespace-nowrap ${t.type === "income" ? "text-emerald-500" : "text-red-500"}`}>

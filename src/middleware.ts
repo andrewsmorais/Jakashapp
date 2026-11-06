@@ -33,6 +33,8 @@ export async function middleware(request: NextRequest) {
   const isProtected = PROTECTED.some((p) => path === p || path.startsWith(p + '/'));
   // Não há landing neste repositório (ela fica em outro): quem abre o endereço do app cai no painel (logado) ou no login.
   if (path === '/') return NextResponse.redirect(new URL((user ? '/dashboard' : '/login') + request.nextUrl.search, request.url));
+  // Pacote MEI saiu do app (só uso pessoal): quem abrir um link antigo vai para o início.
+  if (path === '/mei' || path.startsWith('/mei/')) return NextResponse.redirect(new URL('/dashboard', request.url));
   if ((isProtected || path === '/assinar') && !user) {
     const login = new URL('/login', request.url);
     login.searchParams.set('next', path + request.nextUrl.search);

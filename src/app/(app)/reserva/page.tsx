@@ -74,7 +74,7 @@ export default function ReservaPage() {
           <div><Label>Despesas essenciais por mês (opcional: substitui a média)</Label><input className={inputCls} inputMode="decimal" value={manual} onChange={(e) => setManual(e.target.value)} placeholder={brl(essential)} /></div>
           <div><Label>Meses de cobertura: {months}</Label>
             <input type="range" min={3} max={12} value={months} onChange={(e) => setMonths(Number(e.target.value))} className="w-full accent-brand-dark" />
-            <p className="text-xs text-gray-400">3 a 6 meses é uma referência comum; 6 a 12 se sua renda varia (MEI/autônomo).</p></div>
+            <p className="text-xs text-gray-400">3 a 6 meses é uma referência comum; 6 a 12 se a sua renda varia (por exemplo, autônomo).</p></div>
           <div><Label>Quanto você já tem guardado</Label><input className={inputCls} inputMode="decimal" value={saved} onChange={(e) => setSaved(e.target.value)} placeholder="0,00" /></div>
           <div><Label>Em quantos meses quer chegar lá</Label><input className={inputCls} inputMode="numeric" value={monthsToGoal} onChange={(e) => setMonthsToGoal(e.target.value)} /></div>
         </div>

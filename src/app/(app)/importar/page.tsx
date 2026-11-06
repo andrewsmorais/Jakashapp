@@ -81,7 +81,8 @@ export default function ImportarPage() {
     setTargetId(list[0]?.id ?? "");
     if (parsed) setInvert(suggestInvert(parsed, kind));
   }
-  useEffect(() => { setAsBusiness(Boolean(target?.is_business)); }, [target?.id, target?.is_business]);
+  // App só pessoal: nada entra como "da empresa".
+  useEffect(() => { setAsBusiness(false); }, [target?.id]);
 
   // A prévia é refeita quando muda o arquivo, o destino ou o sinal.
   useEffect(() => {
@@ -282,7 +283,7 @@ export default function ImportarPage() {
                 <Toggle checked={future} onChange={setFuture} label={`Criar as ${futureCount} parcelas que faltam`}
                   hint="Lança as próximas parcelas nas faturas dos meses seguintes. Quando a parcela vier no extrato do mês, o app reconhece e não duplica." />
               )}
-              {(isMei || target?.is_business) && (
+              {isMei && (
                 <Toggle checked={asBusiness} onChange={setAsBusiness} label="Lançar como da empresa (MEI)" hint="Marca estes lançamentos como PJ. Eles entram na receita bruta e no limite do MEI." />
               )}
             </div>

@@ -24,9 +24,6 @@ export const CHAT_PAGES = {
   viagem: { path: '/viagem', label: 'Simulador de viagem' },
   importar: { path: '/importar', label: 'Importar extrato' },
   configuracoes: { path: '/configuracoes', label: 'Configurações' },
-  mei: { path: '/mei', label: 'Pacote MEI' },
-  mei_dasn: { path: '/mei/dasn', label: 'DASN pronta' },
-  mei_clientes: { path: '/mei/clientes', label: 'Clientes e a receber' },
 } as const;
 export type ChatPageKey = keyof typeof CHAT_PAGES;
 const pageKeys = Object.keys(CHAT_PAGES) as [ChatPageKey, ...ChatPageKey[]];

@@ -19,14 +19,14 @@ export const GOAL_TYPES: Record<GoalType, { label: string; icon: string; tips: s
     tips: [
       "Considere pré-natal, parto, enxoval, quarto e itens de segurança.",
       "Planeje a renda durante a licença e os primeiros meses, quando os gastos aumentam.",
-      "MEI: mantenha o DAS em dia. O salário-maternidade tem regras e carência: confirme no INSS.",
+      "O salário-maternidade tem regras e carência: confirme no INSS.",
     ],
   },
   reserva: {
     label: "Reserva de emergência", icon: "🛡️",
     tips: [
       "Comece pelas despesas essenciais de um mês.",
-      "Referência comum: 3 a 6 meses de despesas; 6 a 12 se a renda varia (MEI/autônomo).",
+      "Referência comum: 3 a 6 meses de despesas; 6 a 12 se a renda varia (por exemplo, autônomo).",
       "A reserva precisa de liquidez: dinheiro fácil de resgatar quando precisar.",
     ],
   },

@@ -17,6 +17,9 @@ import { ShoppingReport } from "@/components/ShoppingReport";
 import { BackTitle, Card, Empty, ErrorNote, Label, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
 
 type ListRow = { id: string; user_id: string; name: string; is_business: boolean; created_at: string; list_date: string };
+// Lista que ainda não ganhou nome: o campo "Nome da lista" aparece em branco e, nas escolhas, fica "Lista sem nome".
+const UNNAMED = "Lista sem nome";
+const listLabel = (x: { name: string; list_date: string }) => `${x.name === UNNAMED ? UNNAMED : x.name} · ${formatDateBR(x.list_date)}`;
 const LIST_COLS = "id,user_id,name,is_business,created_at,list_date";
 type Acc = { id: string; name: string };
 type Op = { v: number; insert?: ShopItem; patch?: Partial<ShopItem>; del?: boolean };
@@ -114,7 +117,7 @@ export default function SupermercadoPage() {
     if (le) { setError("Não foi possível carregar a lista. Tente de novo em instantes."); setLoading(false); return; }
     let all = (open ?? []) as ListRow[];
     if (all.length === 0) {
-      const ins = await supabase.from("shopping_lists").insert({ user_id: userId, name: isBiz ? "Empresa" : "Mercado", is_business: isBiz }).select(LIST_COLS).single();
+      const ins = await supabase.from("shopping_lists").insert({ user_id: userId, name: UNNAMED, is_business: isBiz }).select(LIST_COLS).single();
       if (ins.error || !ins.data) { setError("Não foi possível criar a lista."); setLoading(false); return; }
       all = [ins.data as ListRow];
     }
@@ -291,7 +294,7 @@ export default function SupermercadoPage() {
     const food = cats.find((x) => !x.parent_id && /aliment/i.test(x.name));
     setFin({
       amount: fromReceipt && receipt?.total ? receipt.total : totals.cart > 0 ? String(totals.cart).replace(".", ",") : "",
-      description: (fromReceipt && receipt?.store.trim()) || (list?.name ?? "Mercado"),
+      description: (fromReceipt && receipt?.store.trim()) || (list && list.name !== UNNAMED ? list.name : "Mercado"),
       category_id: food?.id ?? "",
       pay: accs[0] ? `acc:${accs[0].id}` : creditCards[0] ? `card:${creditCards[0].id}` : "",
       date: fromReceipt && receipt?.date && receipt.date <= todayISO() ? receipt.date : todayISO(),
@@ -312,7 +315,7 @@ export default function SupermercadoPage() {
     const { data, error: err } = await supabase.rpc("finish_shopping_list", {
       p_list_id: list.id,
       p_amount: amount,
-      p_description: fin.description.trim() || list.name,
+      p_description: fin.description.trim() || (list.name !== UNNAMED ? list.name : "Mercado"),
       p_date: fin.date,
       p_category_id: fin.category_id || null,
       p_account_id: kind === "acc" ? id : null,
@@ -399,16 +402,18 @@ export default function SupermercadoPage() {
 
       {view === "comprar" && (<>
       <Card className="mb-4 !p-4 space-y-3">
-        <div>
-          <Label>Lista</Label>
-          <select className={inputCls} value={list?.id ?? ""} onChange={(e) => pickList(e.target.value)} aria-label="Escolher a lista">
-            {lists.map((x) => <option key={x.id} value={x.id}>{x.name} · {formatDateBR(x.list_date)}</option>)}
-          </select>
-        </div>
+        {step > 1 && (
+          <div>
+            <Label>Qual lista?</Label>
+            <select className={inputCls} value={list?.id ?? ""} onChange={(e) => pickList(e.target.value)} aria-label="Escolher a lista criada no Planejar">
+              {lists.map((x) => <option key={x.id} value={x.id}>{listLabel(x)}</option>)}
+            </select>
+          </div>
+        )}
         {step === 1 && list && (
           <div className="grid grid-cols-2 gap-3">
-            <div><Label>Nome da lista</Label><input key={`n-${list.id}`} className={inputCls} defaultValue={list.name} maxLength={60} placeholder="Ex.: Compra do Atacadão"
-              onBlur={(e) => { const v = e.target.value.trim().replace(/\s+/g, " "); if (v && v !== list.name) void saveListInfo({ name: v.slice(0, 60) }); else if (!v) e.target.value = list.name; }} /></div>
+            <div><Label>Nome da lista</Label><input key={`n-${list.id}`} className={inputCls} defaultValue={list.name === UNNAMED ? "" : list.name} maxLength={60} placeholder="Ex.: Compra do Atacadão"
+              onBlur={(e) => { const v = e.target.value.trim().replace(/\s+/g, " ").slice(0, 60) || UNNAMED; if (v !== list.name) void saveListInfo({ name: v }); }} /></div>
             <div><Label>Data da compra</Label><input key={`d-${list.id}`} type="date" className={inputCls} defaultValue={list.list_date}
               onBlur={(e) => { const v = e.target.value; if (v && v !== list.list_date) void saveListInfo({ list_date: v }); }} /></div>
           </div>

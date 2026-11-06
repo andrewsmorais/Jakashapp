@@ -32,20 +32,27 @@ export default function PerfilPage() {
     });
   }, [ready, userId, supabase]);
 
+  // Grava e confere: sem a confirmação de que a linha mudou, não diz "atualizado".
+  async function saveProfile(patch: { full_name?: string; birth_date?: string | null }): Promise<boolean> {
+    setMsg(null);
+    if (!userId) { setError("Entre na sua conta para salvar."); return false; }
+    const { data, error: err } = await supabase.from("profiles").update(patch).eq("id", userId).select("full_name,birth_date").maybeSingle();
+    if (err || !data) { setError("Não foi possível salvar. Tente de novo."); return false; }
+    setName(data.full_name ?? ""); setBirth(data.birth_date ?? null); setError(null);
+    window.dispatchEvent(new Event("jakash:changed"));
+    return true;
+  }
+
   async function saveName() {
-    const clean = nameDraft.trim();
-    if (clean.length < 2) { setError("Informe seu nome completo."); return; }
-    const { error: err } = await supabase.from("profiles").update({ full_name: clean.slice(0, 80) }).eq("id", userId);
-    if (err) { setError("Não foi possível salvar."); return; }
-    setName(clean); setError(null); setEditingName(false); setMsg("Nome atualizado.");
+    const clean = nameDraft.trim().replace(/\s+/g, " ");
+    if (clean.length < 2) { setError("Informe seu nome."); return; }
+    if (await saveProfile({ full_name: clean.slice(0, 80) })) { setEditingName(false); setMsg("Nome atualizado."); }
   }
 
   const today = new Date().toISOString().slice(0, 10);
   async function saveBirth() {
     if (birthDraft && (birthDraft > today || birthDraft < "1900-01-01")) { setError("Data de nascimento inválida."); return; }
-    const { error: err } = await supabase.from("profiles").update({ birth_date: birthDraft || null }).eq("id", userId);
-    if (err) { setError("Não foi possível salvar."); return; }
-    setBirth(birthDraft || null); setError(null); setEditingBirth(false); setMsg("Data de nascimento atualizada.");
+    if (await saveProfile({ birth_date: birthDraft || null })) { setEditingBirth(false); setMsg("Data de nascimento atualizada."); }
   }
 
   const initials = name.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "J";
@@ -61,7 +68,7 @@ export default function PerfilPage() {
         <div className="py-4">
           <Label>Nome completo</Label>
           {editingName ? (
-            <div className="flex gap-2"><input autoFocus className={inputCls} value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} placeholder="Seu nome completo" /><button onClick={saveName} className={btnCls}>Salvar</button></div>
+            <div className="flex gap-2"><input autoFocus className={inputCls} value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} placeholder="Seu nome completo" /><button onClick={saveName} className={btnCls}>Salvar</button><button onClick={() => { setEditingName(false); setError(null); }} className="text-sm font-bold text-gray-500 px-2">Cancelar</button></div>
           ) : (
             <div className="flex items-center justify-between"><p className="font-bold">{name || "—"}</p><button onClick={() => { setNameDraft(name); setEditingName(true); }} aria-label="Editar nome" className="text-gray-400"><Pencil size={16} /></button></div>
           )}
@@ -69,7 +76,7 @@ export default function PerfilPage() {
         <div className="py-4">
           <Label>Data de nascimento</Label>
           {editingBirth ? (
-            <div className="flex gap-2"><input autoFocus type="date" max={today} className={inputCls} value={birthDraft} onChange={(e) => setBirthDraft(e.target.value)} /><button onClick={saveBirth} className={btnCls}>Salvar</button></div>
+            <div className="flex gap-2"><input autoFocus type="date" max={today} className={inputCls} value={birthDraft} onChange={(e) => setBirthDraft(e.target.value)} /><button onClick={saveBirth} className={btnCls}>Salvar</button><button onClick={() => { setEditingBirth(false); setError(null); }} className="text-sm font-bold text-gray-500 px-2">Cancelar</button></div>
           ) : (
             <div className="flex items-center justify-between"><p className="font-bold">{birth ? formatDateBR(birth) : "—"}</p><button onClick={() => { setBirthDraft(toInputDate(birth)); setEditingBirth(true); }} aria-label="Editar data de nascimento" className="text-gray-400"><Pencil size={16} /></button></div>
           )}

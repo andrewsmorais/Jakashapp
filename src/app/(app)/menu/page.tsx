@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { BarChart3, type LucideIcon } from "lucide-react";
+import { type LucideIcon } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
-import { useIsAdmin } from "@/lib/useIsAdmin";
 import { useUsageType } from "@/lib/useUsageType";
 import { NAV_FOOTER, groupsFor } from "@/lib/nav";
 
@@ -19,9 +18,9 @@ export default function MenuPage() {
   const { supabase, userId, ready } = useSupabase();
   const [name, setName] = useState("");
   const { isMei } = useUsageType();
-  const isAdmin = useIsAdmin();
   const groups = groupsFor(isMei).map((g) => ({ title: g.title, tiles: g.items as Tile[] }));
-  const more: Tile[] = [...NAV_FOOTER, ...(isAdmin ? [{ icon: BarChart3, label: "Painel do dono", href: "/admin" }] : [])];
+  // Painel do dono fica só em Configurações (e só aparece para a conta de administrador).
+  const more: Tile[] = [...NAV_FOOTER];
   const sections = [...groups, { title: "MAIS", tiles: more }];
 
   useEffect(() => {

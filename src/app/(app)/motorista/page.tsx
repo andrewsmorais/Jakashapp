@@ -12,12 +12,14 @@ import { TurnosPanel } from "@/components/driver/TurnosPanel";
 import { BackTitle, Card, Empty, ErrorNote, Label, btnCls, btnGhostCls, inputCls } from "@/components/ui/page";
 
 type Tab = "turnos" | "resultados" | "carros";
-type Preset = "7d" | "mes" | "mes_passado" | "30d" | "custom";
+type Preset = "hoje" | "ontem" | "7d" | "mes" | "mes_passado" | "30d" | "custom";
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 function periodFor(p: Preset, custom: Period): Period {
   const today = todayISO();
   const [y, m, d] = today.split("-").map(Number);
+  if (p === "hoje") return { from: today, to: today };
+  if (p === "ontem") { const y1 = iso(new Date(y, m - 1, d - 1)); return { from: y1, to: y1 }; }
   if (p === "7d") return { from: iso(new Date(y, m - 1, d - 6)), to: today };
   if (p === "30d") return { from: iso(new Date(y, m - 1, d - 29)), to: today };
   if (p === "mes") return { from: `${today.slice(0, 7)}-01`, to: today };
@@ -124,7 +126,7 @@ export default function MotoristaPage() {
       {setupNeeded ? <Card><Empty>Esta área fica disponível depois da próxima atualização do app.</Empty></Card> : (
         <>
           <div className="grid grid-cols-3 gap-2 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#161616] mb-4">
-            {([["turnos", "Turnos"], ["resultados", "Resultados"], ["carros", "Meus carros"]] as const).map(([k, l]) => (
+            {([["turnos", "Turnos"], ["resultados", "Relatórios"], ["carros", "Meus veículos"]] as const).map(([k, l]) => (
               <button key={k} onClick={() => { setTab(k); setSaved(null); setNewVehicle(0); if (k !== "turnos") { setFormOpen(false); setEditing(null); } }} className={`py-2.5 rounded-xl text-sm font-bold ${tab === k ? "bg-white dark:bg-[#262626] shadow-sm" : "text-gray-500"}`}>{l}</button>
             ))}
           </div>
@@ -147,7 +149,7 @@ export default function MotoristaPage() {
             <>
               <Card className="mb-4 !p-4 space-y-3">
                 <div className="flex gap-2 overflow-x-auto -mx-1 px-1">
-                  {([["7d", "7 dias"], ["mes", "Este mês"], ["mes_passado", "Mês passado"], ["30d", "30 dias"], ["custom", "Escolher datas"]] as const).map(([k, l]) => (
+                  {([["hoje", "Hoje"], ["ontem", "Ontem"], ["7d", "7 dias"], ["mes", "Este mês"], ["mes_passado", "Mês passado"], ["30d", "30 dias"], ["custom", "Escolher datas"]] as const).map(([k, l]) => (
                     <button key={k} type="button" onClick={() => setPreset(k)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ${preset === k ? "bg-brand-dark text-white dark:bg-brand-vivid" : "bg-white/70 dark:bg-[#1E1E1E] text-gray-500"}`}>{l}</button>
                   ))}
                 </div>

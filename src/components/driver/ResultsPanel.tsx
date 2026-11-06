@@ -74,16 +74,17 @@ export function ResultsPanel({ shifts, vehicles, period, platform, vehicleId, on
 
           {!platform && all.byPlatform.length > 1 && (
             <Card className="!p-4">
-              <p className="font-extrabold mb-2">Qual plataforma rendeu mais</p>
+              <p className="font-extrabold mb-2">Qual plataforma deu mais lucro</p>
               <div className="divide-y divide-gray-100 dark:divide-[#262626]">
-                {all.byPlatform.map((p) => (
+                {[...all.byPlatform].sort((a, b) => b.metrics.net - a.metrics.net).map((p, i) => (
                   <button key={p.platform} type="button" onClick={() => onPlatform(p.platform)} className="w-full flex items-center gap-3 py-2.5 text-left">
                     <PlatformBadge platform={p.platform} size={32} />
-                    <span className="flex-1 min-w-0"><span className="block font-bold text-sm truncate">{platformOf(p.platform).name}</span><span className="block text-xs text-gray-500">{p.days} {p.days === 1 ? "dia" : "dias"}{p.metrics.trips ? ` · ${p.metrics.trips} ${quantityLabel(p.platform, p.metrics.trips)}` : ""}</span></span>
-                    <span className="text-right"><span className="block font-extrabold text-sm">{brl(p.metrics.gross)}</span><span className="block text-[11px] text-gray-500">{p.estimatedHours ? "≈ " : ""}{perH(p.metrics.grossPerHour)} · {perKm(p.metrics.grossPerKm)}</span></span>
+                    <span className="flex-1 min-w-0"><span className="block font-bold text-sm truncate">{i === 0 && <span className="mr-1">🏆</span>}{platformOf(p.platform).name}</span><span className="block text-xs text-gray-500">{p.days} {p.days === 1 ? "dia" : "dias"}{p.metrics.trips ? ` · ${p.metrics.trips} ${quantityLabel(p.platform, p.metrics.trips)}` : ""} · bruto {brl(p.metrics.gross)}</span></span>
+                    <span className="text-right"><span className={`block font-extrabold text-sm ${p.metrics.net < 0 ? "text-red-600" : ""}`}>{brl(p.metrics.net)}</span><span className="block text-[11px] text-gray-500">{p.estimatedHours ? "≈ " : ""}{perH(p.metrics.netPerHour)} · {perKm(p.metrics.netPerKm)}</span></span>
                   </button>
                 ))}
               </div>
+              <p className="text-[11px] text-gray-400 mt-2">Valor em destaque é o lucro líquido (depois das despesas), por hora e por km.</p>
               {all.byPlatform.some((p) => p.estimatedHours) && <p className="text-[11px] text-gray-400 mt-2">≈ estimado: em dias com mais de uma plataforma sem horas informadas, as horas foram divididas pelo que cada uma rendeu.</p>}
             </Card>
           )}

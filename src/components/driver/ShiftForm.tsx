@@ -286,7 +286,7 @@ export function ShiftForm({ supabase, userId, vehicles, editing, lastUsed, onSav
       <Card className="space-y-3">
         <p className="font-extrabold">Outras despesas <span className="font-normal text-xs text-gray-400">(opcional)</span></p>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {([["tolls", "Pedágio"], ["food", "Alimentação"], ["wash", "Lavagem"], ["parking", "Estacionamento"], ["other_cost", "Outros"]] as const).map(([k, l]) => (
+          {([["tolls", "Pedágio"], ["food", "Alimentação"], ["wash", "Lavagem"], ["parking", "Estacionamento"], ["other_cost", "Outros (pneu, mecânico...)"]] as const).map(([k, l]) => (
             <div key={k}><Label>{l} (R$)</Label><input className={inputCls} inputMode="decimal" value={costs[k]} onChange={(e) => setCosts({ ...costs, [k]: e.target.value })} placeholder="0,00" /></div>
           ))}
         </div>

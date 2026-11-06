@@ -87,3 +87,17 @@ export function monthProgress(month: string): number {
   const days = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
   return d.getDate() / days;
 }
+
+// Soma `k` períodos a uma data "AAAA-MM-DD" (mês que não tem o dia vira o último dia: 31/01 + 1 mês = 28/02).
+export function addPeriod(iso: string, freq: "weekly" | "monthly" | "yearly", k: number): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  if (freq === "weekly") {
+    const t = new Date(Date.UTC(y, m - 1, d + 7 * k));
+    return `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`;
+  }
+  const months = (freq === "yearly" ? 12 : 1) * k;
+  const ty = y + Math.floor((m - 1 + months) / 12);
+  const tm = ((m - 1 + months) % 12 + 12) % 12;
+  const last = new Date(Date.UTC(ty, tm + 1, 0)).getUTCDate();
+  return `${ty}-${pad(tm + 1)}-${pad(Math.min(d, last))}`;
+}

@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileUp, Paperclip, X } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, FileUp, Paperclip, Pin, Repeat, Save, CheckCircle2 } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { useUsageType } from "@/lib/useUsageType";
-import { brl, formatDateBR, parseMoney, todayISO } from "@/lib/format";
-import { categoryOptions, type CatRow } from "@/lib/categories";
+import { addPeriod, brl, formatDateBR, parseMoney, todayISO } from "@/lib/format";
+import { rootId, type CatRow } from "@/lib/categories";
 import { loadCategoryState, visibleCats } from "@/lib/categoryVisibility";
 import { buildCardPurchase, dueDateFor, invoiceMonthFor, splitInstallments } from "@/lib/cards";
 import { ACCEPT, stashFile } from "@/lib/fileImport";
@@ -14,7 +14,7 @@ import { RECEIPT_ACCEPT, uploadReceipt } from "@/lib/receipts";
 import { KIND_LABEL, type RevenueKind } from "@/lib/mei";
 import { lightImpact } from "@/lib/haptics";
 import { useMeiSuppliers } from "@/lib/useMeiSuppliers";
-import { Label, ErrorNote, inputCls, btnCls } from "@/components/ui/page";
+import { Label, ErrorNote, inputCls } from "@/components/ui/page";
 import { SupplierSelect } from "@/components/mei/SupplierSelect";
 import { VoiceEntry } from "@/components/VoiceEntry";
 import type { VoiceItem } from "@/lib/voiceParse";
@@ -48,7 +48,10 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
     type: "expense" as "income" | "expense", amount: "", description: "", category_id: "", account_id: "", date: todayISO(), paid: true,
     method: "account" as "account" | "card" | "debit", card_id: "", installments: 1, biz: false,
     kind: "servicos" as RevenueKind, draw: false, supplier_id: "",
+    fixed: false, sameDue: true, due: todayISO(), compOn: false, comp: todayISO(),
+    repeat: false, freq: "monthly" as "weekly" | "monthly" | "yearly", count: 12,
   });
+  const [myName, setMyName] = useState("");
 
   const fRef = useRef(f);
   fRef.current = f;
@@ -89,7 +92,7 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
       loadCategoryState(supabase, userId).then((st) => ({ data: visibleCats(st.cats, st.hidden) })),
       supabase.from("accounts").select("id,name,is_business").eq("archived", false).order("created_at"),
       supabase.from("credit_cards").select("id,name,closing_day,due_day,is_business,kind,pay_account_id").eq("archived", false).order("created_at"),
-      supabase.from("profiles").select("mei_activity").eq("id", userId).maybeSingle(),
+      supabase.from("profiles").select("mei_activity,full_name").eq("id", userId).maybeSingle(),
     ]).then(([c, a, k, pr]) => {
       const catList = (c.data ?? []) as CatRow[];
       setCats(catList);
@@ -97,9 +100,12 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
       const list = (k.data ?? []) as CardOpt[];
       const credits = list.filter((x) => x.kind === "credito");
       setCards(list);
-      const activity = ((pr.data as { mei_activity?: RevenueKind } | null)?.mei_activity ?? "servicos") as RevenueKind;
+      const prof = pr.data as { mei_activity?: RevenueKind; full_name?: string | null } | null;
+      const activity = (prof?.mei_activity ?? "servicos") as RevenueKind;
+      setMyName(prof?.full_name?.trim() || "Você");
       setF((p) => ({
         ...p, date: todayISO(), installments: 1, kind: activity, draw: false, supplier_id: "",
+        fixed: false, sameDue: true, due: todayISO(), compOn: false, comp: todayISO(), repeat: false, count: 12,
         ...(preset?.cardId && list.some((x) => x.id === preset.cardId)
           ? { type: "expense" as const, method: "card" as const, card_id: preset.cardId, biz: Boolean(list.find((x) => x.id === preset.cardId)?.is_business) }
           : { method: "account" as const, card_id: credits.length === 1 ? credits[0].id : "", biz: false }),
@@ -136,6 +142,8 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
     if (!f.description.trim() || !(amount > 0)) { setError("Informe descrição e um valor maior que zero."); return; }
     if (useCard && !card) { setError("Escolha o cartão."); return; }
     if (useDebit && (!debit || !debit.pay_account_id)) { setError(debit ? "Este cartão de débito está sem conta vinculada. Edite o cartão e escolha a conta." : "Escolha o cartão de débito."); return; }
+    const doRepeat = f.repeat && !useCard && f.count >= 2;
+    if (f.repeat && !useCard && (!Number.isInteger(f.count) || f.count < 2 || f.count > 60)) { setError("Em Repetir, informe de 2 a 60 lançamentos."); return; }
     setSaving(true);
     // Só vai na gravação quando escolhido (assim nada muda para quem não usa fornecedores).
     const sup = showSupplier && f.supplier_id && suppliers.some((x) => x.id === f.supplier_id) ? { supplier_id: f.supplier_id } : {};
@@ -144,7 +152,11 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
       try { const r = await uploadReceipt(supabase, userId!, receipt); att = { attachment_path: r.path, attachment_name: r.name }; }
       catch (err) { setSaving(false); setError(err instanceof Error ? err.message : "Não foi possível enviar o comprovante."); return; }
     }
-    let res;
+    // Campos opcionais: só vão quando a pessoa usou (assim o salvar simples não depende deles).
+    const fixedX = f.fixed && !useCard ? { is_fixed: true } : {};
+    const dueX = f.paid && !f.sameDue && f.due && !useCard && !useDebit ? { due_date: f.due } : {};
+    const compX = f.paid && f.compOn && f.comp && !useCard && !useDebit ? { competence_date: f.comp } : {};
+    let res: { error: unknown } | undefined;
     if (useCard && card) {
       const rows = buildCardPurchase(card, {
         userId: userId!, description: f.description.trim(), total: amount, installments: f.installments, date: f.date, category_id: f.category_id || null,
@@ -154,23 +166,32 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
       // Débito sai da conta na hora: lançamento normal na conta do cartão, marcado com o cartão usado.
       res = await supabase.from("transactions").insert({
         user_id: userId, description: f.description.trim(), amount, type: "expense", date: f.date,
-        category_id: f.category_id || null, account_id: debit.pay_account_id, debit_card_id: debit.id, origin: "manual", is_business: f.biz, ...att, ...sup,
+        category_id: f.category_id || null, account_id: debit.pay_account_id, debit_card_id: debit.id, origin: "manual", is_business: f.biz, ...fixedX, ...att, ...sup,
       });
     } else if (f.paid) {
       res = await supabase.from("transactions").insert({
         user_id: userId, description: f.description.trim(), amount, type: f.type, date: f.date,
         category_id: f.category_id || null, account_id: f.account_id || null, origin: "manual", is_business: f.biz, ...att,
         revenue_kind: f.biz && f.type === "income" ? f.kind : null,
-        is_owner_draw: f.biz && f.type === "expense" && f.draw, ...sup,
+        is_owner_draw: f.biz && f.type === "expense" && f.draw, ...fixedX, ...dueX, ...compX, ...sup,
       });
-    } else {
+    } else if (!doRepeat) {
       res = await supabase.from("bills").insert({
-        user_id: userId, description: f.description.trim(), amount, type: f.type, due_date: f.date,
+        user_id: userId, description: f.description.trim(), amount, type: f.type, due_date: f.date, ...fixedX,
       });
     }
+    // Repetir: o primeiro já foi (ou, sem "pago", é a primeira conta); os demais entram como contas a pagar/receber.
+    if (doRepeat && (!res || !res.error)) {
+      const firstIsBill = !f.paid && !useDebit;
+      const bills = Array.from({ length: f.count }, (_, k) => k).filter((k) => firstIsBill || k > 0).map((k) => ({
+        user_id: userId, description: f.description.trim(), amount, type: f.type, due_date: addPeriod(f.date, f.freq, k), ...fixedX,
+      }));
+      const r2 = await supabase.from("bills").insert(bills);
+      if (r2.error || !res) res = r2;
+    }
     setSaving(false);
-    if (res.error) { setError("Não foi possível salvar."); return; }
-    setF({ ...f, amount: "", description: "", installments: 1, supplier_id: "" });
+    if (!res || res.error) { setError("Não foi possível salvar."); return; }
+    setF({ ...f, amount: "", description: "", installments: 1, supplier_id: "", fixed: false, repeat: false, compOn: false, sameDue: true });
     setReceipt(null);
     setVoiceFields([]);
     window.dispatchEvent(new Event("jakash:changed"));
@@ -182,133 +203,233 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
     if (queue.length) setTimeout(() => window.dispatchEvent(new CustomEvent("jakash:quickadd", { detail: { voice: queue[0], voiceQueue: queue.slice(1) } })), 150);
   }
 
+  // Categoria principal + subcategoria: o que vai para o banco continua sendo um só id (a subcategoria, se houver).
+  const typeCats = cats.filter((c) => c.type === f.type);
+  const parents = typeCats.filter((c) => !c.parent_id).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  const parentId = rootId(cats, f.category_id) ?? "";
+  const subs = typeCats.filter((c) => c.parent_id === parentId).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  const subId = cats.find((c) => c.id === f.category_id)?.parent_id ? f.category_id : "";
+  const accountMode = !useCard && !useDebit;
+  const verbDate = isIncome ? "Recebimento" : "Pagamento";
+  const rowCls = "flex items-center justify-between gap-3 px-4 py-3.5";
+  const hint = "text-xs text-gray-500 dark:text-gray-400 mt-0.5";
+
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <form onSubmit={save} onClick={(e) => e.stopPropagation()}
-        className="w-full md:max-w-md bg-white dark:bg-[#161616] rounded-t-[32px] md:rounded-[32px] p-6 space-y-4 max-h-[92vh] overflow-y-auto">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-extrabold">Novo lançamento</h2>
-          <button type="button" onClick={onClose} aria-label="Fechar" className="text-gray-400"><X size={20} /></button>
+        className="w-full md:max-w-md bg-white dark:bg-[#161616] rounded-t-[32px] md:rounded-[32px] max-h-[92vh] flex flex-col overflow-hidden">
+        <div className={`flex items-center justify-center gap-10 px-6 pt-5${voiceFields.includes("type") ? " ring-2 ring-brand-vivid/40" : ""}`}>
+          {(["expense", "income"] as const).map((t) => {
+            const on = f.type === t;
+            const color = t === "income" ? "text-emerald-600 border-emerald-600" : "text-red-600 border-red-600";
+            return (
+              <button key={t} type="button" onClick={() => { setF({ ...f, type: t, category_id: "" }); unmark("type"); unmark("category"); }}
+                className={`flex items-center gap-2 pb-2 text-lg font-extrabold border-b-[3px] ${on ? color : "border-transparent opacity-40 " + color.split(" ")[0]}`}>
+                {t === "expense" ? <ArrowUpCircle size={22} /> : <ArrowDownCircle size={22} />}
+                {t === "expense" ? "Despesa" : "Receita"}
+              </button>
+            );
+          })}
         </div>
 
-        <VoiceEntry cats={cats} resetKey={preset?.voice} onDraft={(item) => applyVoice(item)} onQueue={(items) => { voiceQueue.current = items; }} />
-        {voiceFields.length > 0 && <p className="text-xs text-gray-500 -mt-2">O que veio da sua voz está destacado. Confira antes de salvar.</p>}
+        <div className="flex-1 overflow-y-auto px-6 pt-5 pb-4 space-y-4">
+          <VoiceEntry cats={cats} resetKey={preset?.voice} onDraft={(item) => applyVoice(item)} onQueue={(items) => { voiceQueue.current = items; }} />
+          {voiceFields.length > 0 && <p className="text-xs text-gray-500 -mt-2">O que veio da sua voz está destacado. Confira antes de salvar.</p>}
 
-        <label className="flex items-center gap-3 rounded-2xl border-2 border-dashed border-brand-dark/30 dark:border-white/15 px-4 py-3 cursor-pointer hover:bg-brand-dark/5 dark:hover:bg-[#1E1E1E]">
-          <FileUp size={20} className="text-brand-dark dark:text-brand-soft shrink-0" />
-          <span className="min-w-0">
-            <span className="block text-sm font-extrabold">Enviar arquivo</span>
-            <span className="block text-xs text-gray-500">PDF, foto, planilha, OFX ou CSV: os lançamentos entram no app</span>
-          </span>
-          <input type="file" className="hidden" accept={ACCEPT} onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ""; if (!file) return; stashFile(file); onClose(); router.push("/importar"); }} />
-        </label>
+          <label className="flex items-center gap-3 rounded-2xl border-2 border-dashed border-brand-dark/30 dark:border-white/15 px-4 py-3 cursor-pointer hover:bg-brand-dark/5 dark:hover:bg-[#1E1E1E]">
+            <FileUp size={20} className="text-brand-dark dark:text-brand-soft shrink-0" />
+            <span className="min-w-0">
+              <span className="block text-sm font-extrabold">Enviar arquivo</span>
+              <span className="block text-xs text-gray-500">PDF, foto, planilha, OFX ou CSV: os lançamentos entram no app</span>
+            </span>
+            <input type="file" className="hidden" accept={ACCEPT} onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ""; if (!file) return; stashFile(file); onClose(); router.push("/importar"); }} />
+          </label>
 
-        <div className={`grid grid-cols-2 gap-2 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#262626]${voiceFields.includes("type") ? " ring-2 ring-brand-vivid/40" : ""}`}>
-          {(["expense", "income"] as const).map((t) => (
-            <button key={t} type="button" onClick={() => { setF({ ...f, type: t, category_id: "" }); unmark("type"); unmark("category"); }}
-              className={`py-2.5 rounded-xl text-sm font-bold ${f.type === t ? (t === "income" ? "bg-emerald-500 text-white" : "bg-red-500 text-white") : "text-gray-500"}`}>
-              {t === "expense" ? "Despesa" : "Receita"}
-            </button>
-          ))}
-        </div>
-
-        {!isIncome && methods.length > 1 && (
-          <div className={`grid gap-2 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#262626] ${methods.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
-            {methods.map(([k, l]) => (
-              <button key={k} type="button" onClick={() => setF({ ...f, method: k, card_id: k === "card" ? (creditCards.length === 1 ? creditCards[0].id : "") : k === "debit" ? (debitCards.length === 1 ? debitCards[0].id : "") : f.card_id })}
-                className={`py-2 rounded-xl text-xs font-bold ${f.method === k ? "bg-white dark:bg-brand-vivid text-brand-dark dark:text-white shadow-sm" : "text-gray-500"}`}>{l}</button>
-            ))}
-          </div>
-        )}
-
-        <div><Label>{useCard && f.installments > 1 ? "Valor total da compra" : "Valor"}</Label><input autoFocus className={inputCls + " !text-2xl !font-extrabold" + hl("amount")} inputMode="decimal" placeholder="0,00" value={f.amount} onChange={(e) => { setF({ ...f, amount: e.target.value }); unmark("amount"); }} /></div>
-        <div><Label>Descrição</Label><input className={inputCls + hl("description")} placeholder={isIncome ? "Ex.: salário" : "Ex.: mercado"} value={f.description} onChange={(e) => { setF({ ...f, description: e.target.value }); unmark("description"); }} /></div>
-        <div className="grid grid-cols-2 gap-3">
-          <div><Label>Categoria</Label>
-            <select className={inputCls + hl("category")} value={f.category_id} onChange={(e) => { setF({ ...f, category_id: e.target.value }); unmark("category"); }}>
-              <option value="">Sem categoria</option>
-              {categoryOptions(cats, f.type).map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-            </select></div>
-          <div><Label>{useCard ? "Data da compra" : f.paid ? "Data" : "Vencimento"}</Label><input type="date" className={inputCls + hl("date")} value={f.date} onChange={(e) => { setF({ ...f, date: e.target.value }); unmark("date"); }} /></div>
-        </div>
-
-        {useCard ? (
-          <>
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Cartão</Label>
-                <select className={inputCls} value={f.card_id} onChange={(e) => setF({ ...f, card_id: e.target.value, biz: Boolean(cards.find((c) => c.id === e.target.value)?.is_business) || f.biz })}>
-                  <option value="">Escolher</option>
-                  {creditCards.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select></div>
-              <div><Label>Parcelas</Label>
-                <select className={inputCls} value={f.installments} onChange={(e) => setF({ ...f, installments: Number(e.target.value) })}>
-                  {Array.from({ length: 24 }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n === 1 ? "À vista" : `${n}x`}</option>)}
-                </select></div>
+          {!isIncome && methods.length > 1 && (
+            <div className={`grid gap-2 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#262626] ${methods.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+              {methods.map(([k, l]) => (
+                <button key={k} type="button" onClick={() => setF({ ...f, method: k, repeat: k === "card" ? false : f.repeat, card_id: k === "card" ? (creditCards.length === 1 ? creditCards[0].id : "") : k === "debit" ? (debitCards.length === 1 ? debitCards[0].id : "") : f.card_id })}
+                  className={`py-2 rounded-xl text-xs font-bold ${f.method === k ? "bg-white dark:bg-brand-vivid text-brand-dark dark:text-white shadow-sm" : "text-gray-500"}`}>{l}</button>
+              ))}
             </div>
-            {f.installments > 1 && per > 0 && <p className="text-xs text-gray-500 -mt-2">{f.installments}x de {brl(per)} (a primeira parcela pode ter alguns centavos a mais).</p>}
-            {card && <p className="text-xs text-gray-500 -mt-2">Entra na fatura que vence em {formatDateBR(dueDateFor(card, invoiceMonthFor(card, f.date)))}. O dinheiro só sai da conta quando você pagar a fatura.</p>}
-          </>
-        ) : useDebit ? (
-          <>
-            <div><Label>Cartão de débito</Label>
-              <select className={inputCls} value={f.card_id} onChange={(e) => setF({ ...f, card_id: e.target.value, biz: Boolean(debitCards.find((c) => c.id === e.target.value)?.is_business) || f.biz })}>
-                <option value="">Escolher</option>
-                {debitCards.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select></div>
-            {debit && <p className="text-xs text-gray-500 -mt-2">Sai na hora da conta {accs.find((a) => a.id === debit.pay_account_id)?.name ?? "vinculada ao cartão"}.</p>}
-          </>
-        ) : (
-          <>
-            {accs.length > 0 && f.paid && (
-              <div><Label>Conta</Label>
-                <select className={inputCls} value={f.account_id} onChange={(e) => setF({ ...f, account_id: e.target.value, biz: Boolean(accs.find((a) => a.id === e.target.value)?.is_business) || f.biz })}>
-                  <option value="">Conta principal</option>
-                  {accs.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+          )}
+
+          <div className="text-center">
+            <p className="text-sm text-gray-500 dark:text-gray-400">{useCard && f.installments > 1 ? "Valor total da compra" : "Valor"}</p>
+            <input autoFocus aria-label="Valor" className={"w-full bg-transparent text-center text-4xl font-extrabold py-2 focus:outline-none placeholder:text-gray-300 rounded-2xl" + hl("amount")} inputMode="decimal" placeholder="R$ 0,00" value={f.amount} onChange={(e) => { setF({ ...f, amount: e.target.value }); unmark("amount"); }} />
+          </div>
+
+          <div><Label>Descrição</Label><input className={inputCls + hl("description")} placeholder={isIncome ? "Ex.: Salário" : "Ex.: Compra no supermercado"} value={f.description} onChange={(e) => { setF({ ...f, description: e.target.value }); unmark("description"); }} /></div>
+          <div><Label>Categoria</Label>
+            <select className={inputCls + hl("category")} value={parentId} onChange={(e) => { setF({ ...f, category_id: e.target.value }); unmark("category"); }}>
+              <option value="">Escolha uma categoria</option>
+              {parents.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select></div>
+          <div><Label>Subcategoria</Label>
+            <select className={inputCls + (parentId ? "" : " opacity-60")} disabled={!parentId} value={subId} onChange={(e) => setF({ ...f, category_id: e.target.value || parentId })}>
+              <option value="">{parentId ? (subs.length ? "Sem subcategoria" : "Esta categoria não tem subcategorias") : "Selecione uma categoria primeiro"}</option>
+              {subs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select></div>
+
+          {useCard ? (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Cartão</Label>
+                  <select className={inputCls} value={f.card_id} onChange={(e) => setF({ ...f, card_id: e.target.value, biz: Boolean(cards.find((c) => c.id === e.target.value)?.is_business) || f.biz })}>
+                    <option value="">Escolher</option>
+                    {creditCards.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select></div>
+                <div><Label>Parcelas</Label>
+                  <select className={inputCls} value={f.installments} onChange={(e) => setF({ ...f, installments: Number(e.target.value) })}>
+                    {Array.from({ length: 24 }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n === 1 ? "À vista" : `${n}x`}</option>)}
+                  </select></div>
+              </div>
+              <div><Label>Data da compra</Label><input type="date" className={inputCls + hl("date")} value={f.date} onChange={(e) => { setF({ ...f, date: e.target.value }); unmark("date"); }} /></div>
+              {f.installments > 1 && per > 0 && <p className="text-xs text-gray-500 -mt-2">{f.installments}x de {brl(per)} (a primeira parcela pode ter alguns centavos a mais).</p>}
+              {card && <p className="text-xs text-gray-500 -mt-2">Entra na fatura que vence em {formatDateBR(dueDateFor(card, invoiceMonthFor(card, f.date)))}. O dinheiro só sai da conta quando você pagar a fatura.</p>}
+            </>
+          ) : useDebit ? (
+            <>
+              <div><Label>Cartão de débito</Label>
+                <select className={inputCls} value={f.card_id} onChange={(e) => setF({ ...f, card_id: e.target.value, biz: Boolean(debitCards.find((c) => c.id === e.target.value)?.is_business) || f.biz })}>
+                  <option value="">Escolher</option>
+                  {debitCards.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select></div>
-            )}
-            <label className="flex items-center justify-between rounded-2xl border border-white/70 dark:border-white/5 bg-white/60 dark:bg-[#1E1E1E] px-4 py-3 text-sm font-bold">
-              {isIncome ? "Já recebi" : "Já paguei"}
-              <input type="checkbox" checked={f.paid} onChange={(e) => setF({ ...f, paid: e.target.checked })} className="h-5 w-5 accent-brand-dark" />
-            </label>
-            {!f.paid && <p className="text-xs text-gray-500 -mt-2">Fica em Contas a pagar/receber até você dar baixa.</p>}
-          </>
-        )}
-        {(isMei || f.biz) && (useCard || useDebit || f.paid) && (
-          <label className={`flex items-center justify-between rounded-2xl border border-white/70 dark:border-white/5 bg-white/60 dark:bg-[#1E1E1E] px-4 py-3 text-sm font-bold${voiceFields.includes("biz") ? " ring-2 ring-brand-vivid/40" : ""}`}>
-            <span>Da empresa (MEI)<span className="block text-xs font-normal text-gray-500">Entra na receita bruta e no limite do MEI</span></span>
-            <input type="checkbox" checked={f.biz} onChange={(e) => { setF({ ...f, biz: e.target.checked }); unmark("biz"); }} className="h-5 w-5 accent-brand-dark" />
-          </label>
-        )}
-        {f.biz && isIncome && f.paid && (
-          <div>
-            <Label>Tipo da receita (para a DASN)</Label>
-            <select className={inputCls} value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as RevenueKind })}>
-              {(Object.keys(KIND_LABEL) as RevenueKind[]).map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}
+              {debit && <p className="text-xs text-gray-500 -mt-2">Sai na hora da conta {accs.find((a) => a.id === debit.pay_account_id)?.name ?? "vinculada ao cartão"}.</p>}
+              <div><Label>Data</Label><input type="date" className={inputCls + hl("date")} value={f.date} onChange={(e) => { setF({ ...f, date: e.target.value }); unmark("date"); }} /></div>
+            </>
+          ) : (
+            <>
+              {accs.length > 0 && f.paid && (
+                <div><Label>Conta</Label>
+                  <select className={inputCls} value={f.account_id} onChange={(e) => setF({ ...f, account_id: e.target.value, biz: Boolean(accs.find((a) => a.id === e.target.value)?.is_business) || f.biz })}>
+                    <option value="">Conta principal</option>
+                    {accs.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select></div>
+              )}
+              <div className="rounded-2xl border border-gray-200 dark:border-white/10 divide-y divide-gray-200 dark:divide-white/10">
+                <div className={rowCls}>
+                  <div className="min-w-0"><p className="flex items-center gap-2 font-bold"><CheckCircle2 size={18} className="text-emerald-600" />{isIncome ? "Foi Recebida" : "Foi Pago"}</p><p className={hint}>Status do pagamento/recebimento</p></div>
+                  <Switch on={f.paid} onChange={(v) => setF({ ...f, paid: v })} label={isIncome ? "Foi recebida" : "Foi pago"} />
+                </div>
+                <div className="px-4 py-3.5">
+                  <Label>{f.paid ? `Data do ${verbDate}` : "Vencimento"}</Label>
+                  <input type="date" className={inputCls + hl("date")} value={f.date} onChange={(e) => { setF({ ...f, date: e.target.value }); unmark("date"); }} />
+                </div>
+                {f.paid && (
+                  <div className="px-4 py-3.5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0"><p className="font-bold">Vencimento no mesmo dia</p><p className={hint}>{f.sameDue ? `Venc. ${formatDateBR(f.date)}` : "Informe o vencimento abaixo"}</p></div>
+                      <Switch on={f.sameDue} onChange={(v) => setF({ ...f, sameDue: v })} label="Vencimento no mesmo dia" />
+                    </div>
+                    {!f.sameDue && <input type="date" aria-label="Vencimento" className={inputCls + " mt-3"} value={f.due} onChange={(e) => setF({ ...f, due: e.target.value })} />}
+                  </div>
+                )}
+                {f.paid && (
+                  <div className="px-4 py-3.5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0"><p className="font-bold">Data de Competência</p><p className={hint}>{f.compOn ? "Mês a que o lançamento pertence" : `Usaremos a data do ${verbDate.toLowerCase()}: ${formatDateBR(f.date)}`}</p></div>
+                      <Switch on={f.compOn} onChange={(v) => setF({ ...f, compOn: v })} label="Data de competência" />
+                    </div>
+                    {f.compOn && <input type="date" aria-label="Data de competência" className={inputCls + " mt-3"} value={f.comp} onChange={(e) => setF({ ...f, comp: e.target.value })} />}
+                  </div>
+                )}
+              </div>
+              {!f.paid && <p className="text-xs text-gray-500 -mt-2">Fica em Contas a pagar/receber até você dar baixa.</p>}
+            </>
+          )}
+
+          {!useCard && (
+            <div className="rounded-2xl border border-gray-200 dark:border-white/10 divide-y divide-gray-200 dark:divide-white/10">
+              <div className={rowCls}>
+                <div className="min-w-0"><p className="flex items-center gap-2 font-bold"><Pin size={18} className="text-gray-400" />{isIncome ? "Receita Fixa" : "Despesa Fixa"}</p><p className={hint}>Classifica como {isIncome ? "uma receita fixa" : "uma despesa fixa"}</p></div>
+                <Switch on={f.fixed} onChange={(v) => setF({ ...f, fixed: v })} label={isIncome ? "Receita fixa" : "Despesa fixa"} />
+              </div>
+              <div className="px-4 py-3.5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0"><p className="flex items-center gap-2 font-bold"><Repeat size={18} className="text-gray-400" />Repetir Transação</p><p className={hint}>Criar várias de uma vez</p></div>
+                  <Switch on={f.repeat} onChange={(v) => setF({ ...f, repeat: v })} label="Repetir transação" />
+                </div>
+                {f.repeat && (
+                  <>
+                    <div className="grid grid-cols-2 gap-3 mt-3">
+                      <div><Label>Frequência</Label>
+                        <select className={inputCls} value={f.freq} onChange={(e) => setF({ ...f, freq: e.target.value as typeof f.freq })}>
+                          <option value="monthly">Todo mês</option><option value="weekly">Toda semana</option><option value="yearly">Todo ano</option>
+                        </select></div>
+                      <div><Label>Quantidade</Label>
+                        <input className={inputCls} inputMode="numeric" value={String(f.count)} onChange={(e) => setF({ ...f, count: Number(e.target.value.replace(/\D/g, "")) || 0 })} /></div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      {f.paid || useDebit ? "O primeiro entra agora; os outros ficam em Contas a pagar/receber, nas datas seguintes." : "Cada data vira uma conta a pagar/receber."}
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div><Label>Pessoa Responsável</Label>
+            <select className={inputCls} value="me" onChange={() => undefined} aria-label="Pessoa responsável">
+              <option value="me">{myName || "Você"}</option>
             </select>
+            <p className="text-xs text-gray-500 mt-1">Quem lança é o dono do lançamento; na gestão compartilhada, cada um vê de quem é.</p>
           </div>
-        )}
-        {f.biz && !isIncome && !useCard && !useDebit && f.paid && (
-          <label className="flex items-center justify-between rounded-2xl border border-white/70 dark:border-white/5 bg-white/60 dark:bg-[#1E1E1E] px-4 py-3 text-sm font-bold">
-            <span>É retirada para a pessoa física<span className="block text-xs font-normal text-gray-500">Pró-labore: não conta como despesa da empresa</span></span>
-            <input type="checkbox" checked={f.draw} onChange={(e) => setF({ ...f, draw: e.target.checked })} className="h-5 w-5 accent-brand-dark" />
-          </label>
-        )}
-        {showSupplier && <SupplierSelect suppliers={suppliers} value={f.supplier_id} onChange={(id) => setF({ ...f, supplier_id: id })} onNavigate={onClose} />}
-        <ErrorNote message={error} />
-        {(useCard || useDebit || f.paid) && (
-          <div>
-            <label className="flex items-center gap-2 text-sm font-bold text-brand-dark dark:text-brand-soft cursor-pointer w-fit">
-              <Paperclip size={16} /> {receipt ? "Trocar comprovante" : "Anexar comprovante (opcional)"}
-              <input type="file" className="hidden" accept={RECEIPT_ACCEPT} onChange={(e) => { setReceipt(e.target.files?.[0] ?? null); e.target.value = ""; }} />
+
+          {(isMei || f.biz) && (useCard || useDebit || f.paid) && (
+            <label className={`flex items-center justify-between rounded-2xl border border-white/70 dark:border-white/5 bg-white/60 dark:bg-[#1E1E1E] px-4 py-3 text-sm font-bold${voiceFields.includes("biz") ? " ring-2 ring-brand-vivid/40" : ""}`}>
+              <span>Da empresa (MEI)<span className="block text-xs font-normal text-gray-500">Entra na receita bruta e no limite do MEI</span></span>
+              <input type="checkbox" checked={f.biz} onChange={(e) => { setF({ ...f, biz: e.target.checked }); unmark("biz"); }} className="h-5 w-5 accent-brand-dark" />
             </label>
-            {receipt && (
-              <p className="text-xs text-gray-500 mt-1 flex items-center gap-2 min-w-0"><span className="truncate">{receipt.name}</span>
-                <button type="button" onClick={() => setReceipt(null)} className="text-red-500 font-bold shrink-0">remover</button></p>
-            )}
-          </div>
-        )}
-        <button className={btnCls + " w-full"} disabled={saving} type="submit">{saving ? "Salvando..." : "Salvar"}</button>
+          )}
+          {f.biz && isIncome && f.paid && accountMode && (
+            <div>
+              <Label>Tipo da receita (para a DASN)</Label>
+              <select className={inputCls} value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as RevenueKind })}>
+                {(Object.keys(KIND_LABEL) as RevenueKind[]).map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}
+              </select>
+            </div>
+          )}
+          {f.biz && !isIncome && accountMode && f.paid && (
+            <label className="flex items-center justify-between rounded-2xl border border-white/70 dark:border-white/5 bg-white/60 dark:bg-[#1E1E1E] px-4 py-3 text-sm font-bold">
+              <span>É retirada para a pessoa física<span className="block text-xs font-normal text-gray-500">Pró-labore: não conta como despesa da empresa</span></span>
+              <input type="checkbox" checked={f.draw} onChange={(e) => setF({ ...f, draw: e.target.checked })} className="h-5 w-5 accent-brand-dark" />
+            </label>
+          )}
+          {showSupplier && <SupplierSelect suppliers={suppliers} value={f.supplier_id} onChange={(id) => setF({ ...f, supplier_id: id })} onNavigate={onClose} />}
+          {(useCard || useDebit || f.paid) && (
+            <div>
+              <label className="flex items-center gap-2 text-sm font-bold text-brand-dark dark:text-brand-soft cursor-pointer w-fit">
+                <Paperclip size={16} /> {receipt ? "Trocar comprovante" : "Anexar comprovante (opcional)"}
+                <input type="file" className="hidden" accept={RECEIPT_ACCEPT} onChange={(e) => { setReceipt(e.target.files?.[0] ?? null); e.target.value = ""; }} />
+              </label>
+              {receipt && (
+                <p className="text-xs text-gray-500 mt-1 flex items-center gap-2 min-w-0"><span className="truncate">{receipt.name}</span>
+                  <button type="button" onClick={() => setReceipt(null)} className="text-red-500 font-bold shrink-0">remover</button></p>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-gray-100 dark:border-white/10 px-6 pt-3 pb-4">
+          <ErrorNote message={error} />
+          <button disabled={saving} type="submit"
+            className={`mt-1 w-full inline-flex items-center justify-center gap-2 rounded-full py-3.5 text-lg font-bold text-white disabled:opacity-50 ${isIncome ? "bg-emerald-600" : "bg-red-600"}`}>
+            <Save size={20} />{saving ? "Salvando..." : "Salvar"}
+          </button>
+          <button type="button" onClick={onClose} className="w-full pt-3 text-lg text-gray-500">Cancelar</button>
+        </div>
       </form>
     </div>
+  );
+}
+
+// Interruptor liga/desliga (verde quando ligado).
+function Switch({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)}
+      className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${on ? "bg-emerald-500" : "bg-gray-300 dark:bg-[#333]"}`}>
+      <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${on ? "left-[22px]" : "left-0.5"}`} />
+    </button>
   );
 }

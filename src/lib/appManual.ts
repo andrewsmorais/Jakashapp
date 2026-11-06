@@ -2,6 +2,8 @@
 // Ao mudar uma tela, atualize aqui para o chat não explicar o que não existe mais.
 export const APP_USAGE_MANUAL = `# MANUAL DO APP (rótulos como aparecem na tela)
 
+IMPORTANTE: o Jakash só ANOTA e organiza. Ele não paga contas nem faturas, não faz transferência, Pix, depósito, resgate ou compra de investimento, e não acessa o banco. Todo botão de "pagar", "aportar" ou "resgatar" apenas REGISTRA algo que a pessoa já fez fora do app.
+
 ## Navegação
 - Celular: barra de baixo com Início, Lançamentos, botão "+" (Novo lançamento), Supermercado e Menu. A engrenagem no topo abre Configurações. "Menu" abre a tela com todos os grupos.
 - Computador: menu lateral com botão "Novo lançamento" e os grupos HOJE (Início, Lançamentos, Supermercado, Contas a pagar e receber), MEU DINHEIRO (Contas e cartões, Dívidas, Guardar), PLANEJAR (Orçamento do mês, Relatórios), TRABALHO (Motorista), e embaixo Chat da Jaki e Configurações.
@@ -37,7 +39,7 @@ Passos: idioma, como vai usar ("Uso pessoal" ou "Casal"), suas contas (nome e sa
 ## Contas a pagar e receber
 - Topo: totais A pagar e A receber. Formulário: Descrição, Valor, Vencimento, Tipo (A pagar ou A receber), Repete (Não ou Todo mês) e "Adicionar conta".
 - Filtro: Tudo (padrão), Hoje, Esta semana, Este mês, Escolher datas (pelo vencimento).
-- Em cada conta: botão "Paguei" (ou "Recebi") e lixeira (exclui direto). Ao dar baixa: a conta sai das pendentes e entra um lançamento com a mesma descrição e valor, com a data de hoje, sem categoria, na conta principal. Se era "Todo mês", cria a próxima. Se for parcela de acordo de dívida, abate a dívida.
+- Em cada conta: botão "Paguei" (ou "Recebi") e lixeira (exclui direto). O app não paga a conta; "Paguei" anota que a pessoa já pagou. Ao dar baixa: a conta sai das pendentes e entra um lançamento com a mesma descrição e valor, com a data de hoje, sem categoria, na conta principal. Se era "Todo mês", cria a próxima. Se for parcela de acordo de dívida, abate a dívida.
 
 ## Contas bancárias
 - Botão "Adicionar conta": Nome, Tipo (Conta corrente, Poupança, Dinheiro, Investimento), Instituição, Saldo atual. Ao editar, digitar o saldo certo ajusta a conta.
@@ -46,7 +48,7 @@ Passos: idioma, como vai usar ("Uso pessoal" ou "Casal"), suas contas (nome e sa
 ## Cartões
 - "Adicionar cartão": escolha Crédito ou Débito (não muda depois). Crédito: Nome, Instituição, Bandeira, Limite, Dia de fechamento, Dia de vencimento e (opcional) conta que paga a fatura. Débito: Nome, Bandeira e a conta de onde o débito sai (obrigatória).
 - Na lista: fatura atual, vencimento, barra do limite usado e situação (Aberta, Fechada, Vencida, Paga, Sem compras). Dentro do Editar existe "Excluir cartão" (apaga as compras e pagamentos dele).
-- Fatura (toque no cartão): navegue por mês; vê Total, Fecha em, Vence em, Pago e Falta pagar. "Nova compra" abre o lançamento já no cartão. "Pagar fatura": informe Valor (pode ser parcial), Data e "Sai da conta" (pode escolher "Não descontar") e toque em "Registrar pagamento". O pagamento não conta como nova despesa (as compras já estão nas despesas). Em "Pagamentos" dá para excluir um pagamento.
+- Fatura (toque no cartão): navegue por mês; vê Total, Fecha em, Vence em, Pago e Falta pagar. "Nova compra" abre o lançamento já no cartão. "Pagar fatura" (o pagamento de verdade é feito no banco; aqui a pessoa ANOTA que pagou): informe Valor (pode ser parcial), Data e "Sai da conta" (a conta cujo saldo anotado diminui; pode escolher "Não descontar") e toque em "Registrar pagamento". Isso não move dinheiro: só deixa a fatura e o saldo certos no app. O pagamento não conta como nova despesa (as compras já estão nas despesas). Em "Pagamentos" dá para excluir um pagamento anotado.
 - Mudar o dia de fechamento vale para as próximas compras.
 
 ## Parcelamentos
@@ -55,14 +57,14 @@ Não se cadastra nada: as compras parceladas no cartão aparecem sozinhas, com p
 ## Dívidas
 - Formulário: Nome, Tipo, Saldo devedor, Juros ao mês (%), Parcela mínima; "Mais detalhes" (Credor, Situação, Atrasada desde, Proposta à vista, Essencial); botão "Adicionar dívida".
 - Situações: Em dia, Atrasada, Negativada, Negociada, Quitada.
-- "Pagou?" + "Abater": diminui o saldo da dívida (ao chegar a zero vira Quitada). Abater não cria lançamento nem mexe no saldo das contas.
+- "Pagou?" + "Abater": anota um pagamento já feito e diminui o saldo da dívida no app (o pagamento é feito fora do app) (ao chegar a zero vira Quitada). Abater não cria lançamento nem mexe no saldo das contas.
 - "Registrar acordo": Parcelas (1 a 60), Valor de cada, "1ª parcela vence em" e "Criar parcelas": cada parcela vira uma conta a pagar; ao dar baixa nelas o saldo da dívida abate.
 - "Sair do vermelho": informe quanto consegue pagar por mês e toque em "Montar meu plano" para ver a ordem para pagar.
 
 ## Guardar
-- Objetivos: escolha o tipo (Viagem, Reserva de emergência, Carro, Casamento etc.), Nome, Valor-alvo, Já guardado, Data-alvo e "Criar objetivo". Com data, mostra "Guarde R$ X por mês". Em cada objetivo, "Novo aporte" e "Aportar". No começo do mês pode aparecer "Sobrou R$ X" com o botão "Guardar".
+- Objetivos: escolha o tipo (Viagem, Reserva de emergência, Carro, Casamento etc.), Nome, Valor-alvo, Já guardado, Data-alvo e "Criar objetivo". Com data, mostra "Guarde R$ X por mês". Em cada objetivo, "Novo aporte" e "Aportar" (anota quanto a pessoa separou; o app não move o dinheiro). No começo do mês pode aparecer "Sobrou R$ X" com o botão "Guardar".
 - Reserva: calcula a meta com a média dos gastos essenciais dos últimos 3 meses e "Meses de cobertura" (3 a 12); botão "Transformar em objetivo".
-- Investimentos: "Adicionar investimento" (Nome, Tipo, Instituição, Quanto aplicou, Valor atual). Em cada um: Aporte, Resgate, Atualizar valor, Histórico, Editar, Arquivar. O registro é manual; o app não busca cotações nem conecta a corretoras.
+- Investimentos: "Adicionar investimento" (Nome, Tipo, Instituição, Quanto aplicou, Valor atual). Em cada um: Aporte, Resgate, Atualizar valor, Histórico, Editar, Arquivar. Aporte e Resgate só ANOTAM o que a pessoa fez na corretora ou no banco; o app não aplica nem resgata de verdade. O registro é manual; o app não busca cotações nem conecta a corretoras.
 - Simulador: "Quanto vou ter" (valor inicial, aporte por mês, rendimento ao ano, prazo) e "Quanto guardar por mês" (valor que quer juntar e prazo).
 - Viagem: destino, data de ida, dias, pessoas, custos e quanto já guardou; mostra custo estimado, quanto guardar por mês e botão "Criar objetivo da viagem". Não consulta preço de passagem nem hotel.
 

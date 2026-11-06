@@ -10,7 +10,7 @@ const WA = (process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? "").replace(/\D/g, "");
 const EMAIL = (process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "").trim();
 
 type Msg = { role: "user" | "assistant"; content: string; handoff?: boolean };
-const SUGGESTIONS = ["Como lanço uma despesa?", "Como guardo dinheiro para um objetivo?", "Como pago a fatura do cartão?", "Como cancelo a assinatura?"];
+const SUGGESTIONS = ["Como lanço uma despesa?", "Como guardo dinheiro para um objetivo?", "Como anoto o pagamento da fatura?", "Como cancelo a assinatura?"];
 const IDLE_MS = 5 * 60_000; // sem resposta por 5 minutos: o chat é encerrado
 
 export default function FaleConoscoPage() {

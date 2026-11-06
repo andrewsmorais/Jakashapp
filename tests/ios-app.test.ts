@@ -2,13 +2,13 @@ import assert from 'node:assert/strict';
 import { generateKeyPairSync, verify } from 'node:crypto';
 import { b64url, decodeJwsPayload, normalizePem } from '@/lib/jwtEs256';
 import {
-  buildAppStoreJwt, billingEventFor, checkTransaction, hasLiveAsaasSubscription, mapAppleStatus, profilePatchFromStatuses,
+  buildAppStoreJwt, billingEventFor, checkTransaction, mapAppleStatus, profilePatchFromStatuses,
   type AppleTransaction,
 } from '@/lib/appleIap';
 import { apnsBundleId, buildApnsBody, buildApnsJwt, classifyApnsResponse, isValidApnsToken } from '@/lib/apns';
 import { buildNativeDeepLink, isNativeUserAgent, parseNativeCallback, samePathOnly } from '@/lib/native';
 import { safeNext } from '@/lib/authUtil';
-import { PLANS, PLAN_FEATURES, PLAN_IDS, aiDailyLimit, canonicalPlan, isPlanId, memberLimit, planFromAppleProduct, planFromValue } from '@/lib/plans';
+import { PLANS, PLAN_FEATURES, PLAN_IDS, aiDailyLimit, canonicalPlan, isPlanId, memberLimit, planFromAppleProduct } from '@/lib/plans';
 
 // Testes do app iOS (sem rede e sem banco). Rodar: npx tsx --tsconfig tsconfig.json tests/ios-app.test.ts
 let passed = 0;
@@ -124,19 +124,6 @@ ok('billingEventFor', () => {
   assert.deepEqual(billingEventFor(4, null), { kind: 'overdue', amount: 0 });
   assert.equal(billingEventFor(7, 'cpf'), null);
 });
-ok('hasLiveAsaasSubscription', () => {
-  const future = new Date(NOW + 86400_000).toISOString();
-  const past = new Date(NOW - 86400_000).toISOString();
-  assert.equal(hasLiveAsaasSubscription({ asaas_subscription_id: 'sub_1', subscription_status: 'active' }, NOW), true);
-  assert.equal(hasLiveAsaasSubscription({ asaas_subscription_id: 'sub_1', subscription_status: 'past_due' }, NOW), true);
-  assert.equal(hasLiveAsaasSubscription({ asaas_subscription_id: 'sub_1', subscription_status: 'trial', subscription_expires_at: future }, NOW), true);
-  assert.equal(hasLiveAsaasSubscription({ asaas_subscription_id: 'sub_1', subscription_status: 'trial', subscription_expires_at: past }, NOW), false);
-  assert.equal(hasLiveAsaasSubscription({ asaas_subscription_id: 'sub_1', subscription_status: 'canceled' }, NOW), false);
-  assert.equal(hasLiveAsaasSubscription({ asaas_subscription_id: null, subscription_status: 'active' }, NOW), false);
-  assert.equal(hasLiveAsaasSubscription({ asaas_subscription_id: 'sub_1', subscription_status: 'active', billing_provider: 'apple' }, NOW), false);
-  assert.equal(hasLiveAsaasSubscription(null, NOW), false);
-});
-
 // ---------------------------------------------------------------------------
 // JWTs ES256 (APNs e App Store Server API)
 // ---------------------------------------------------------------------------
@@ -269,9 +256,6 @@ ok('planos à venda: só Pessoal (cpf) e Empresarial (mei), com preço, nome e p
     { name: 'Jakash Pessoal', value: 19.9, members: 3, aiDaily: 40, apple: 'jakash.pessoal.mensal' });
   assert.deepEqual({ name: PLANS.mei.name, value: PLANS.mei.value, members: PLANS.mei.members, aiDaily: PLANS.mei.aiDaily, apple: PLANS.mei.appleProductId },
     { name: 'Jakash Empresarial', value: 39.9, members: 3, aiDaily: 60, apple: 'jakash.empresarial.mensal' });
-  assert.equal(planFromValue(19.9), 'cpf');
-  assert.equal(planFromValue(39.9), 'mei');
-  assert.equal(planFromValue(29.9), null);
 });
 ok('checkout só aceita cpf ou mei (isPlanId); familia e lixo são recusados', () => {
   assert.equal(isPlanId('cpf'), true);

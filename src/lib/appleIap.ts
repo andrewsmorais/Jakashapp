@@ -123,19 +123,8 @@ export function billingEventFor(status: number, plan: PlanId | null): { kind: 'p
   }
 }
 
-// ---------------------------------------------------------------------------------------------
-// Assinatura do Asaas (pagamento pelo site) que impede a compra dentro do app
-// ---------------------------------------------------------------------------------------------
-export type BillingLite = { asaas_subscription_id?: string | null; subscription_status?: string | null; subscription_expires_at?: string | null; billing_provider?: string | null };
-
-/** Tem assinatura do Asaas valendo (ativa, em atraso, ou em teste ainda no prazo)? Quem tem não compra de novo pela Apple. */
-export function hasLiveAsaasSubscription(p: BillingLite | null | undefined, now = Date.now()): boolean {
-  if (!p || !p.asaas_subscription_id || p.billing_provider === 'apple') return false;
-  const st = String(p.subscription_status);
-  if (st === 'active' || st === 'past_due') return true;
-  if (st === 'trial') return !p.subscription_expires_at || new Date(p.subscription_expires_at).getTime() > now;
-  return false;
-}
+// Campos de cobrança lidos do perfil
+export type BillingLite = { subscription_status?: string | null; subscription_expires_at?: string | null; billing_provider?: string | null };
 
 // ---------------------------------------------------------------------------------------------
 // Chamadas à App Store Server API

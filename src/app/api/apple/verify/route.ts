@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { AppleApiError, appleIapConfigured, checkTransaction, fetchAppleTransaction, hasLiveAsaasSubscription, iapFlagOn } from '@/lib/appleIap';
-import { readBilling, recordAppleBillingEvent } from '@/lib/billingProfile';
+import { AppleApiError, appleIapConfigured, checkTransaction, fetchAppleTransaction, iapFlagOn } from '@/lib/appleIap';
+import { recordAppleBillingEvent } from '@/lib/billingProfile';
 import { PLANS } from '@/lib/plans';
 
 // Confirma uma compra feita no app iOS. O app só manda o número da transação; tudo o que vale vem da Apple:
@@ -33,8 +33,6 @@ export async function POST(request: Request) {
     if (!parsed.success) return NextResponse.json({ error: 'Pedido inválido' }, { status: 400 });
 
     const admin = createAdminClient();
-    const billing = await readBilling(admin, user.id);
-    if (hasLiveAsaasSubscription(billing)) return NextResponse.json({ error: 'Você já tem uma assinatura ativa.' }, { status: 409 });
 
     let found;
     try {

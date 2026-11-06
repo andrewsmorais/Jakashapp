@@ -1,7 +1,7 @@
 // Regressões das correções da auditoria de 23/10/2026 (run-2): teste vencido, push e categorias padrão.
 // Rodar: npm run test:security
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { isEntitled } from "../src/lib/entitlements";
 import { isValidPushEndpoint } from "../src/lib/push";
@@ -48,14 +48,12 @@ t("envio de push tem prazo e o cron tem prazo por usuário", () => {
   assert.match(read("src/app/api/cron/reminders/route.ts"), /withDeadline\(notify\(p\), left\)/);
 });
 
-t("checkout não dá segundo teste grátis", () => {
-  const s = read("src/app/api/asaas/checkout/route.ts");
-  assert.match(s, /const trialUsed = Boolean\(profile\.asaas_subscription_id\)/);
-  assert.match(s, /trialDays > 0 \? 'trial' : 'unpaid'/);
-});
-t("excluir conta exige cancelamento confirmado", () => {
-  const s = read("src/app/api/account/delete/route.ts");
-  assert.match(s, /if \(!cancelled && asaasLive\)/);
+t("a Asaas não existe mais no código (venda só pela App Store)", () => {
+  for (const f of ["src/app/api/asaas/checkout/route.ts", "src/app/api/asaas/webhook/route.ts", "src/lib/asaasSync.ts"]) {
+    assert.equal(existsSync(join(__dirname, "..", f)), false, f);
+  }
+  assert.doesNotMatch(read("src/app/api/account/delete/route.ts"), /asaas/i);
+  assert.doesNotMatch(read("src/app/api/plan/route.ts"), /asaas/i);
 });
 t("categoria padrão só vem do app", () => {
   const s = read("supabase/migrations/20261024010000_categories_default_guard.sql");

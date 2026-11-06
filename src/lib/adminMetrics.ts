@@ -1,7 +1,7 @@
 // Cálculos do painel admin. Funções puras: recebem o JSON de public.admin_period() e devolvem números prontos.
 //
 // Definições (as mesmas mostradas no painel):
-//  - Receita            = pagamentos confirmados no período (eventos do webhook do Asaas)
+//  - Receita            = pagamentos confirmados no período (eventos registrados da App Store)
 //  - Custos diretos     = taxas de pagamento + Vercel + Supabase + IA
 //  - Lucro bruto        = receita - reembolsos - custos diretos
 //  - Custo operacional  = tudo que foi lançado, menos impostos (diretos + domínio + outros)
@@ -106,7 +106,7 @@ function finance(totals: PeriodTotals, costs: CostRow[], fromDate: string, toDat
     costSum.other = (costSum.other ?? 0) + (prorated.other ?? 0);
   }
 
-  // Taxa automática (vem do Asaas) tem prioridade sobre o valor lançado à mão.
+  // Taxa automática (quando existir) tem prioridade sobre o valor lançado à mão.
   const fees = n(totals.fees_known) > 0 ? n(totals.fees) : n(costSum.payment_fees);
   const direct = fees + n(costSum.vercel) + n(costSum.supabase) + n(costSum.ai);
   const other = n(costSum.domain) + n(costSum.other);

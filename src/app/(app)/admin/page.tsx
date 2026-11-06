@@ -7,7 +7,6 @@ import { BackTitle, Card, Empty, ErrorNote } from "@/components/ui/page";
 import { KpiCard } from "@/components/admin/KpiCard";
 import { CustomersChart, RevenueChart } from "@/components/admin/AdminCharts";
 import { CostsForm } from "@/components/admin/CostsForm";
-import { SyncBar } from "@/components/admin/SyncBar";
 import { PeriodPicker } from "@/components/admin/PeriodPicker";
 import { brl } from "@/lib/format";
 import type { CostRow, Dashboard } from "@/lib/adminMetrics";
@@ -60,9 +59,6 @@ export default function AdminPage() {
       {data && cur && (
         <>
           <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <SyncBar sync={data.sync} onDone={() => { load(from, to); }} />
-            </div>
             <div className="flex-1">
               <PeriodPicker from={from} to={to} onApply={handlePeriodChange} />
             </div>
@@ -126,13 +122,13 @@ export default function AdminPage() {
             <Card>
               <h2 className="font-extrabold text-lg mb-3 flex items-center gap-2"><Percent size={18} /> Como o lucro é calculado</h2>
               <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1.5">
-                <li><b>Vendido</b> = pagamentos confirmados no mês (Asaas).</li>
-                <li><b>Lucro bruto</b> = vendido − reembolsos − taxas do Asaas (reais, vindas da API), Vercel, Supabase e IA.</li>
+                <li><b>Vendido</b> = pagamentos confirmados no mês (App Store).</li>
+                <li><b>Lucro bruto</b> = vendido − reembolsos − taxas de pagamento (lançadas por você), Vercel, Supabase e IA.</li>
                 <li><b>Custo operacional</b> = todos os custos lançados, menos impostos.</li>
                 <li><b>Lucro líquido</b> = lucro bruto − domínio, outros e impostos.</li>
               </ul>
               <p className="text-xs text-gray-500 mt-3">
-                Vendas e cancelamentos contam a partir de agora (quando o painel passou a registrar os eventos do Asaas). O que você lança em &ldquo;Custos&rdquo; vem de você, não é automático.
+                Vendas e cancelamentos contam a partir de agora (quando o painel passou a registrar os eventos da App Store). O que você lança em &ldquo;Custos&rdquo; vem de você, não é automático.
               </p>
             </Card>
           </section>

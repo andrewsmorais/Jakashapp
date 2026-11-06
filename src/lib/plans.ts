@@ -1,7 +1,7 @@
 // Fonte unica de verdade dos planos. O valor cobrado SEMPRE vem daqui (servidor),
 // nunca do navegador.
 //
-// Dois planos a venda (decisao de 23/10/2026). Ids (gravados em profiles.subscription_plan e no Asaas) NAO mudam:
+// Dois planos a venda (decisao de 23/10/2026). Ids (gravados em profiles.subscription_plan) NAO mudam:
 //   cpf = Jakash Pessoal      (tudo do uso pessoal, ate 3 pessoas na mesma casa)
 //   mei = Jakash Empresarial  (tudo do Pessoal + pacote MEI)
 // O plano antigo 'familia' deixou de ser vendido: se aparecer gravado, vale como 'cpf' (ver LEGACY_PLAN_ALIASES).
@@ -71,11 +71,6 @@ export function planFromAppleProduct(productId: unknown): PlanId | null {
 // Preço do plano sempre em reais (a moeda de exibição do usuário não muda o valor cobrado).
 export function planPrice(plan: PlanId): string {
   return PLANS[plan].value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
-
-// Plano -> valor mensal, para identificar o plano pela cobranca do Asaas.
-export function planFromValue(value: number): PlanId | null {
-  return PLAN_IDS.find((id) => Math.abs(PLANS[id].value - value) < 0.005) ?? null;
 }
 
 // Quantas pessoas (contando o dono) cabem na gestao compartilhada. Todos os planos comportam 3;

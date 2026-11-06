@@ -2,8 +2,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { BillingLite } from '@/lib/appleIap';
 
 // Leitura tolerante dos campos de cobrança: enquanto a migration do app iOS (billing_provider) não foi aplicada,
-// a coluna não existe; nesse caso lê sem ela em vez de quebrar o fluxo de quem paga pelo Asaas.
-const BASE = 'asaas_subscription_id, subscription_status, subscription_plan, subscription_expires_at';
+// a coluna não existe; nesse caso lê sem ela em vez de quebrar o fluxo.
+const BASE = 'subscription_status, subscription_plan, subscription_expires_at';
 
 export type BillingRow = BillingLite & { subscription_plan?: string | null };
 

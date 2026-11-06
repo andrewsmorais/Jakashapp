@@ -10,7 +10,7 @@ const FIELDS: { key: keyof Omit<CostRow, "month" | "notes">; label: string; hint
   { key: "supabase", label: "Supabase" },
   { key: "ai", label: "IA (OpenAI)" },
   { key: "domain", label: "Domínio" },
-  { key: "payment_fees", label: "Taxas Asaas (só se não vier do Asaas)" },
+  { key: "payment_fees", label: "Taxas de pagamento (Apple)" },
   { key: "taxes", label: "Impostos" },
   { key: "other", label: "Outros" },
 ];

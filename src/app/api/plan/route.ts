@@ -3,7 +3,6 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getEntitlement } from '@/lib/entitlements';
 import { canonicalPlan } from '@/lib/plans';
-import { hasLiveAsaasSubscription } from '@/lib/appleIap';
 import { readBilling } from '@/lib/billingProfile';
 
 // Plano efetivo do usuário (o próprio ou o do dono da casa). Só para a interface decidir o que mostrar;
@@ -25,8 +24,7 @@ export async function GET() {
     plan,
     status: ent?.status ?? null,
     viaOwner: ent?.viaOwner ?? false,
-    // Como a própria conta paga: 'apple' (App Store), 'asaas' (site) ou null. asaasLive = tem assinatura do site valendo (não oferece compra no app).
-    billingProvider: billing?.billing_provider === 'apple' ? 'apple' : billing?.asaas_subscription_id ? 'asaas' : null,
-    asaasLive: hasLiveAsaasSubscription(billing),
+    // Como a própria conta paga: 'apple' (App Store) ou null. A venda é só pela App Store.
+    billingProvider: billing?.billing_provider === 'apple' ? 'apple' : null,
   });
 }

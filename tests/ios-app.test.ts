@@ -8,7 +8,8 @@ import {
 import { apnsBundleId, buildApnsBody, buildApnsJwt, classifyApnsResponse, isValidApnsToken } from '@/lib/apns';
 import { buildNativeDeepLink, isNativeUserAgent, parseNativeCallback, samePathOnly } from '@/lib/native';
 import { safeNext } from '@/lib/authUtil';
-import { PLANS, PLAN_FEATURES, PLAN_IDS, aiDailyLimit, canonicalPlan, isPlanId, memberLimit, planFromAppleProduct } from '@/lib/plans';
+import { PLANS, PLAN_FEATURES, PLAN_IDS, TRIAL_DAYS, aiDailyLimit, annualSavingsPct, canonicalPlan, isPlanId, memberLimit, planFromAppleProduct, planMonthlyValue } from '@/lib/plans';
+import { isLiveStatus } from '@/lib/entitlements';
 
 // Testes do app iOS (sem rede e sem banco). Rodar: npx tsx --tsconfig tsconfig.json tests/ios-app.test.ts
 let passed = 0;
@@ -62,14 +63,14 @@ ok('mapAppleStatus: 1 ativa; 3 e 4 em atraso; 2 e 5 cancelada; resto ignora', ()
 const USER = '3f2b8c1e-9d4a-4c55-8a1f-0b6e2d7c9a10';
 const NOW = Date.UTC(2026, 9, 23, 12, 0, 0);
 const goodTx = (over: Partial<AppleTransaction> = {}): AppleTransaction => ({
-  bundleId: 'com.jakash.app', productId: 'jakash.pessoal.mensal', transactionId: '2000000111', originalTransactionId: '2000000100',
+  bundleId: 'com.jakash.app', productId: 'jakash.mensal', transactionId: '2000000111', originalTransactionId: '2000000100',
   appAccountToken: USER, expiresDate: NOW + 30 * 86400_000, environment: 'Sandbox', ...over,
 });
 
 ok('checkTransaction aceita compra válida e mapeia o plano', () => {
   const r = checkTransaction(goodTx(), USER, NOW);
   assert.equal(r.ok, true);
-  if (r.ok) { assert.equal(r.plan, 'cpf'); assert.equal(r.originalTransactionId, '2000000100'); assert.equal(r.expiresAt, new Date(NOW + 30 * 86400_000).toISOString()); }
+  if (r.ok) { assert.equal(r.plan, 'mensal'); assert.equal(r.trial, false); assert.equal(r.originalTransactionId, '2000000100'); assert.equal(r.expiresAt, new Date(NOW + 30 * 86400_000).toISOString()); }
 });
 ok('checkTransaction aceita appAccountToken em maiúsculas', () => {
   assert.equal(checkTransaction(goodTx({ appAccountToken: USER.toUpperCase() }), USER, NOW).ok, true);
@@ -88,10 +89,10 @@ ok('checkTransaction recusa pacote, produto, conta, estorno, vencida e incomplet
   assert.equal(reason(null), 'incomplete');
 });
 ok('produtos da Apple <-> planos', () => {
-  assert.equal(planFromAppleProduct('jakash.pessoal.mensal'), 'cpf');
-  assert.equal(planFromAppleProduct('jakash.empresarial.mensal'), 'mei');
-  // Produtos dos planos antigos (Essencial, Família, MEI) não existem mais na loja.
-  for (const old of ['jakash.essencial.mensal', 'jakash.familia.mensal', 'jakash.mei.mensal', 'jakash.empresarial.anual']) assert.equal(planFromAppleProduct(old), null, old);
+  assert.equal(planFromAppleProduct('jakash.mensal'), 'mensal');
+  assert.equal(planFromAppleProduct('jakash.anual'), 'anual');
+  // Produtos dos planos antigos (Pessoal, Empresarial, Essencial, Família, MEI) não são mais vendidos.
+  for (const old of ['jakash.pessoal.mensal', 'jakash.empresarial.mensal', 'jakash.essencial.mensal', 'jakash.familia.mensal', 'jakash.mei.mensal', 'jakash.empresarial.anual']) assert.equal(planFromAppleProduct(old), null, old);
   assert.equal(new Set(PLAN_IDS.map((id) => PLANS[id].appleProductId)).size, PLAN_IDS.length);
 });
 
@@ -100,9 +101,11 @@ const statusResp = (status: number, tx: AppleTransaction) => ({
   data: [{ lastTransactions: [{ status, originalTransactionId: tx.originalTransactionId, signedTransactionInfo: jws(tx) }] }],
 });
 ok('profilePatchFromStatuses: ativa, atraso e cancelada', () => {
-  const tx = goodTx({ productId: 'jakash.empresarial.mensal' });
+  const tx = goodTx({ productId: 'jakash.anual' });
   const a = profilePatchFromStatuses(statusResp(1, tx), '2000000100');
-  assert.deepEqual(a?.patch, { subscription_status: 'active', subscription_expires_at: new Date(tx.expiresDate as number).toISOString(), subscription_plan: 'mei', billing_provider: 'apple' });
+  assert.deepEqual(a?.patch, { subscription_status: 'active', subscription_expires_at: new Date(tx.expiresDate as number).toISOString(), subscription_plan: 'anual', billing_provider: 'apple' });
+  // Ainda nos 7 dias grátis da Apple: fica como 'trial'.
+  assert.equal(profilePatchFromStatuses(statusResp(1, goodTx({ offerDiscountType: 'FREE_TRIAL' })), '2000000100')?.patch.subscription_status, 'trial');
   assert.equal(profilePatchFromStatuses(statusResp(4, tx), '2000000100')?.patch.subscription_status, 'past_due');
   assert.equal(profilePatchFromStatuses(statusResp(3, tx), '2000000100')?.patch.subscription_status, 'past_due');
   assert.equal(profilePatchFromStatuses(statusResp(2, tx), '2000000100')?.patch.subscription_status, 'canceled');
@@ -118,11 +121,13 @@ ok('profilePatchFromStatuses: ignora outra assinatura, outro pacote, status desc
   assert.equal(unknown?.patch.subscription_plan, undefined);
 });
 ok('billingEventFor', () => {
-  assert.deepEqual(billingEventFor(1, 'cpf'), { kind: 'paid', amount: 19.9 });
-  assert.deepEqual(billingEventFor(5, 'mei'), { kind: 'refunded', amount: 39.9 });
-  assert.deepEqual(billingEventFor(2, 'mei'), { kind: 'canceled', amount: 0 });
+  assert.deepEqual(billingEventFor(1, 'mensal'), { kind: 'paid', amount: 19.9 });
+  assert.deepEqual(billingEventFor(1, 'anual'), { kind: 'paid', amount: 159 });
+  assert.equal(billingEventFor(1, 'mensal', true), null); // teste grátis não é pagamento
+  assert.deepEqual(billingEventFor(5, 'anual'), { kind: 'refunded', amount: 159 });
+  assert.deepEqual(billingEventFor(2, 'mensal'), { kind: 'canceled', amount: 0 });
   assert.deepEqual(billingEventFor(4, null), { kind: 'overdue', amount: 0 });
-  assert.equal(billingEventFor(7, 'cpf'), null);
+  assert.equal(billingEventFor(7, 'mensal'), null);
 });
 // ---------------------------------------------------------------------------
 // JWTs ES256 (APNs e App Store Server API)
@@ -248,48 +253,55 @@ ok('toque em notificação: só caminhos do site', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Planos: Pessoal (cpf) e Empresarial (mei); 'familia' deixou de ser vendido mas ainda vale como cpf
+// Planos: um só, Mensal (R$ 19,90) ou Anual (R$ 159), os dois com 7 dias grátis. Antigos (cpf, mei, familia) valem como Mensal.
 // ---------------------------------------------------------------------------
-ok('planos à venda: só Pessoal (cpf) e Empresarial (mei), com preço, nome e produto da Apple', () => {
-  assert.deepEqual(PLAN_IDS, ['cpf', 'mei']);
-  assert.deepEqual({ name: PLANS.cpf.name, value: PLANS.cpf.value, members: PLANS.cpf.members, aiDaily: PLANS.cpf.aiDaily, apple: PLANS.cpf.appleProductId },
-    { name: 'Jakash Pessoal', value: 19.9, members: 3, aiDaily: 40, apple: 'jakash.pessoal.mensal' });
-  assert.deepEqual({ name: PLANS.mei.name, value: PLANS.mei.value, members: PLANS.mei.members, aiDaily: PLANS.mei.aiDaily, apple: PLANS.mei.appleProductId },
-    { name: 'Jakash Empresarial', value: 39.9, members: 3, aiDaily: 60, apple: 'jakash.empresarial.mensal' });
+ok('planos à venda: Mensal e Anual, com preço, nome e produto da Apple', () => {
+  assert.deepEqual(PLAN_IDS, ['mensal', 'anual']);
+  assert.deepEqual({ name: PLANS.mensal.name, value: PLANS.mensal.value, months: PLANS.mensal.months, members: PLANS.mensal.members, apple: PLANS.mensal.appleProductId },
+    { name: 'Jakash Mensal', value: 19.9, months: 1, members: 3, apple: 'jakash.mensal' });
+  assert.deepEqual({ name: PLANS.anual.name, value: PLANS.anual.value, months: PLANS.anual.months, members: PLANS.anual.members, apple: PLANS.anual.appleProductId },
+    { name: 'Jakash Anual', value: 159, months: 12, members: 3, apple: 'jakash.anual' });
+  assert.equal(TRIAL_DAYS, 7);
+  assert.equal(planMonthlyValue('anual'), 13.25);
+  assert.equal(annualSavingsPct(), 33);
 });
-ok('checkout só aceita cpf ou mei (isPlanId); familia e lixo são recusados', () => {
-  assert.equal(isPlanId('cpf'), true);
-  assert.equal(isPlanId('mei'), true);
-  for (const bad of ['familia', 'cnpj', 'zap', '', undefined, null, 1, {}]) assert.equal(isPlanId(bad), false, String(bad));
+ok('isPlanId só aceita mensal ou anual', () => {
+  assert.equal(isPlanId('mensal'), true);
+  assert.equal(isPlanId('anual'), true);
+  for (const bad of ['cpf', 'mei', 'familia', 'cnpj', 'zap', '', undefined, null, 1, {}]) assert.equal(isPlanId(bad), false, String(bad));
 });
-ok("'familia' gravado no perfil vale como cpf (3 pessoas, mesmo limite de IA)", () => {
-  assert.equal(canonicalPlan('familia'), 'cpf');
-  assert.equal(canonicalPlan('cpf'), 'cpf');
-  assert.equal(canonicalPlan('mei'), 'mei');
+ok('planos antigos gravados no perfil valem como Mensal', () => {
+  for (const old of ['cpf', 'mei', 'familia']) assert.equal(canonicalPlan(old), 'mensal', old);
+  assert.equal(canonicalPlan('anual'), 'anual');
   for (const unknown of ['zap', 'piloto', 'cnpj', '', undefined, null, 'toString']) assert.equal(canonicalPlan(unknown), null, String(unknown));
-  assert.equal(memberLimit('familia'), 3);
-  assert.equal(memberLimit('cpf'), 3);
-  assert.equal(memberLimit('mei'), 3);
+  assert.equal(memberLimit('anual'), 3);
   assert.equal(memberLimit(null), 3);
   const saved = process.env.AI_CHAT_DAILY_LIMIT;
   delete process.env.AI_CHAT_DAILY_LIMIT;
   try {
-    assert.equal(aiDailyLimit('familia'), aiDailyLimit('cpf'));
-    assert.equal(aiDailyLimit('cpf'), 40);
-    assert.equal(aiDailyLimit('mei'), 60);
-    assert.equal(aiDailyLimit('cnpj'), 60);
+    assert.equal(aiDailyLimit('mensal'), 40);
+    assert.equal(aiDailyLimit('anual'), 40);
+    assert.equal(aiDailyLimit('mei'), 40);
   } finally {
     if (saved !== undefined) process.env.AI_CHAT_DAILY_LIMIT = saved;
   }
 });
-ok('listas de venda: Pessoal tem as telas pessoais; Empresarial é Pessoal + pacote MEI; ninguém cita planos antigos', () => {
-  const text = (id: 'cpf' | 'mei') => PLAN_FEATURES[id].join(' | ');
-  for (const must of ['voz', 'extrato', 'Cartões', 'Limites', 'Dívidas', 'Investimentos', 'planejamento', 'Chat da Jaki', 'Motorista de app', 'até 3 pessoas', 'subcategorias']) {
-    assert.ok(text('cpf').includes(must), `Pessoal sem "${must}"`);
-  }
-  assert.ok(PLAN_FEATURES.mei[0].includes('Pessoal'));
-  for (const must of ['limite anual', 'DAS e DASN', 'Clientes', 'Pix', 'Recibos', 'Calculadora de preço', 'contador']) assert.ok(text('mei').includes(must), `Empresarial sem "${must}"`);
-  for (const id of PLAN_IDS) assert.ok(!/Essencial|Família|familia/.test(PLANS[id].name + text(id)), id);
+ok('quem tem acesso: teste no prazo; ativa até 3 dias depois do fim; sem plano, cancelada ou vencida não', () => {
+  const now = Date.parse('2026-11-06T12:00:00Z');
+  const day = 86_400_000;
+  const iso = (t: number) => new Date(t).toISOString();
+  assert.equal(isLiveStatus('trial', iso(now + day), now), true);
+  assert.equal(isLiveStatus('trial', iso(now - 1), now), false);
+  assert.equal(isLiveStatus('trial', null, now), false);
+  assert.equal(isLiveStatus('active', iso(now - 2 * day), now), true);
+  assert.equal(isLiveStatus('active', iso(now - 4 * day), now), false);
+  assert.equal(isLiveStatus('past_due', null, now), true);
+  for (const st of ['none', 'canceled', 'unpaid', null, undefined]) assert.equal(isLiveStatus(st, iso(now + day), now), false, String(st));
+});
+ok('lista do que a assinatura inclui', () => {
+  const text = PLAN_FEATURES.join(' | ');
+  for (const must of ['voz', 'extrato', 'Cartões', 'Supermercado', 'Motorista de app', 'Chat da Jaki', 'até 3 pessoas']) assert.ok(text.includes(must), `sem "${must}"`);
+  assert.ok(!/Essencial|Família|Pessoal|Empresarial/.test(text));
 });
 
 console.log(`ios-app: ${passed} testes passaram${process.exitCode ? ' (com falhas)' : ''}`);

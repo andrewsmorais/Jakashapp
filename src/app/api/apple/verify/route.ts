@@ -48,7 +48,7 @@ export async function POST(request: Request) {
 
     const { error } = await admin.from('profiles').update({
       subscription_plan: check.plan,
-      subscription_status: 'active',
+      subscription_status: check.trial ? 'trial' : 'active',
       subscription_expires_at: check.expiresAt,
       billing_provider: 'apple',
       apple_original_transaction_id: check.originalTransactionId,
@@ -60,8 +60,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Não foi possível liberar o plano agora. Tente restaurar a compra.' }, { status: 500 });
     }
 
-    await recordAppleBillingEvent(admin, { userId: user.id, transactionId: check.transactionId, kind: 'paid', plan: check.plan, amount: PLANS[check.plan].value });
-    return NextResponse.json({ ok: true, plan: check.plan, expiresAt: check.expiresAt });
+    // No teste grátis não houve cobrança: o pagamento entra quando a Apple renovar (aviso em /api/apple/notifications).
+    if (!check.trial) await recordAppleBillingEvent(admin, { userId: user.id, transactionId: check.transactionId, kind: 'paid', plan: check.plan, amount: PLANS[check.plan].value });
+    return NextResponse.json({ ok: true, plan: check.plan, expiresAt: check.expiresAt, trial: check.trial });
   } catch (error) {
     if (error instanceof AppleApiError) console.error('[apple/verify]', error.message);
     else console.error('[apple/verify] erro', (error as Error).message);

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/adminAuth';
 import { buildDashboard, PLAN_LABEL, type RawPeriod, type CurrentMetrics, type PlanRow } from '@/lib/adminMetrics';
-import { PLANS, PLAN_IDS, canonicalPlan, isPlanId } from '@/lib/plans';
+import { PLAN_IDS, canonicalPlan, isPlanId, planMonthlyValue } from '@/lib/plans';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,7 +34,6 @@ export async function GET(req: Request) {
   // Current snapshot metrics
   type SnapRow = { subscription_status: string | null; subscription_plan: string | null };
   const profiles = (snapshot.data || []) as SnapRow[];
-  const live = (p: SnapRow) => p.subscription_status === 'active' || p.subscription_status === 'past_due' || p.subscription_status === 'trial';
   const paying = profiles.filter((p) => p.subscription_status === 'active' || p.subscription_status === 'past_due').length;
   const trial = profiles.filter((p) => p.subscription_status === 'trial').length;
   const active = profiles.filter((p) => p.subscription_status === 'active').length;
@@ -42,11 +41,11 @@ export async function GET(req: Request) {
 
   const canceled = profiles.filter((p) => p.subscription_status === 'canceled').length;
 
-  // 'familia' (plano antigo, não é mais vendido) entra como Pessoal; planos desconhecidos (zap, piloto...) ficam como estão.
+  // Planos antigos (cpf, mei, familia) entram como Mensal; desconhecidos (zap, piloto...) ficam como estão.
   const keyOf = (plan: string | null | undefined): string => canonicalPlan(plan) ?? plan ?? '';
 
-  // Calculate MRR from paying + trial (valores dos planos vêm de lib/plans)
-  const mrr = PLAN_IDS.reduce((sum, id) => sum + PLANS[id].value * profiles.filter((p) => keyOf(p.subscription_plan) === id && live(p)).length, 0);
+  // Receita mensal recorrente: só quem paga (o teste grátis não paga); o anual entra como 1/12 por mês.
+  const mrr = Math.round(PLAN_IDS.reduce((sum, id) => sum + planMonthlyValue(id) * profiles.filter((p) => keyOf(p.subscription_plan) === id && (p.subscription_status === 'active' || p.subscription_status === 'past_due')).length, 0) * 100) / 100;
 
   // Receita do período por plano
   type EventRow = { plan: string | null; kind: string; amount: number | string | null };

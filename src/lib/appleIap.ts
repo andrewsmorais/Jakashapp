@@ -37,12 +37,17 @@ export type AppleTransaction = {
   expiresDate?: number; // milissegundos
   revocationDate?: number;
   environment?: string;
+  /** "FREE_TRIAL" quando a transação é o período grátis (oferta de teste da App Store). */
+  offerDiscountType?: string;
 };
+
+/** A transação é o teste grátis (7 dias) da App Store. */
+export const isFreeTrial = (tx: AppleTransaction | null | undefined): boolean => tx?.offerDiscountType === 'FREE_TRIAL';
 
 export const decodeTransaction = (jws: unknown) => decodeJwsPayload<AppleTransaction>(jws);
 
 export type TxCheck =
-  | { ok: true; plan: PlanId; expiresAt: string; originalTransactionId: string; transactionId: string; environment: string | null }
+  | { ok: true; plan: PlanId; expiresAt: string; originalTransactionId: string; transactionId: string; environment: string | null; trial: boolean }
   | { ok: false; reason: 'bundle' | 'product' | 'account' | 'revoked' | 'expired' | 'incomplete' };
 
 /** Regras para aceitar uma compra: pacote certo, produto conhecido, comprada por ESTA conta, não estornada e ainda válida. */
@@ -54,13 +59,13 @@ export function checkTransaction(tx: AppleTransaction | null, userId: string, no
   if (String(tx.appAccountToken ?? '').toLowerCase() !== userId.toLowerCase()) return { ok: false, reason: 'account' };
   if (tx.revocationDate) return { ok: false, reason: 'revoked' };
   if (tx.expiresDate <= now) return { ok: false, reason: 'expired' };
-  return { ok: true, plan, expiresAt: new Date(tx.expiresDate).toISOString(), originalTransactionId: tx.originalTransactionId, transactionId: tx.transactionId, environment: tx.environment ?? null };
+  return { ok: true, plan, expiresAt: new Date(tx.expiresDate).toISOString(), originalTransactionId: tx.originalTransactionId, transactionId: tx.transactionId, environment: tx.environment ?? null, trial: isFreeTrial(tx) };
 }
 
 // ---------------------------------------------------------------------------------------------
 // Estado da assinatura (Get All Subscription Statuses) -> perfil
 // ---------------------------------------------------------------------------------------------
-export type ProfileStatus = 'active' | 'past_due' | 'canceled';
+export type ProfileStatus = 'trial' | 'active' | 'past_due' | 'canceled';
 
 /** 1 ativa -> active; 3 nova tentativa de cobrança e 4 carência -> past_due; 2 expirada e 5 estornada -> canceled. */
 export function mapAppleStatus(status: unknown): ProfileStatus | null {
@@ -98,11 +103,13 @@ export function profilePatchFromStatuses(resp: SubscriptionStatusResponse, origi
   if (!mapped || !tx) return null;
   if (tx.bundleId && tx.bundleId !== bundleId) return null;
   const plan = planFromAppleProduct(tx.productId);
+  // Ativa, mas ainda no teste grátis: fica como 'trial' (o painel conta à parte e não entra como receita).
+  const status: ProfileStatus = mapped === 'active' && isFreeTrial(tx) ? 'trial' : mapped;
   return {
     status: Number(entry.status),
     tx,
     patch: {
-      subscription_status: mapped,
+      subscription_status: status,
       subscription_expires_at: typeof tx.expiresDate === 'number' ? new Date(tx.expiresDate).toISOString() : null,
       ...(plan ? { subscription_plan: plan } : {}),
       billing_provider: 'apple',
@@ -110,11 +117,11 @@ export function profilePatchFromStatuses(resp: SubscriptionStatusResponse, origi
   };
 }
 
-/** Tipo/valor do evento gravado em billing_events (painel do dono) para cada estado. */
-export function billingEventFor(status: number, plan: PlanId | null): { kind: 'paid' | 'overdue' | 'refunded' | 'canceled'; amount: number } | null {
+/** Tipo/valor do evento gravado em billing_events (painel do dono) para cada estado. No teste grátis não há pagamento. */
+export function billingEventFor(status: number, plan: PlanId | null, trial = false): { kind: 'paid' | 'overdue' | 'refunded' | 'canceled'; amount: number } | null {
   const price = plan ? PLANS[plan].value : 0;
   switch (status) {
-    case 1: return { kind: 'paid', amount: price };
+    case 1: return trial ? null : { kind: 'paid', amount: price };
     case 3:
     case 4: return { kind: 'overdue', amount: 0 };
     case 5: return { kind: 'refunded', amount: price };

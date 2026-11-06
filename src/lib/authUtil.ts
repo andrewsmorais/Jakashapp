@@ -17,6 +17,5 @@ export function authError(message: string): string {
   return "Não foi possível concluir. Tente novamente.";
 }
 
-// Entrada provisória: com os campos vazios, "Entrar" abre o app sem login (as telas abrem, mas sem dados da conta).
-// Desligue quando o login for fechado, junto com NEXT_PUBLIC_REQUIRE_LOGIN=1 (ativa o bloqueio das telas no middleware).
-export const LOGIN_BYPASS = true;
+// Entrada sem login (campos vazios) foi desligada em 06/11/2026: o app exige login e assinatura (ver middleware).
+export const LOGIN_BYPASS = false;

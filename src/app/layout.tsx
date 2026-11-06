@@ -10,11 +10,11 @@ const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakart
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.jakash.app"),
   title: "Jakash | Organize seu dinheiro com IA",
-  description: "Organize seu dinheiro no dia a dia: lançamentos, contas a pagar, cartões, dívidas e objetivos, com assistente de IA dentro do app. 7 dias grátis, sem cartão.",
+  description: "Organize seu dinheiro no dia a dia: lançamentos, contas a pagar, cartões, dívidas e objetivos, com assistente de IA dentro do app. 7 dias grátis.",
   robots: { index: false, follow: false },
   openGraph: {
     title: "Jakash | Organize seu dinheiro com IA",
-    description: "Organize seu dinheiro no dia a dia, com assistente de IA dentro do app. 7 dias grátis, sem cartão.",
+    description: "Organize seu dinheiro no dia a dia, com assistente de IA dentro do app. 7 dias grátis.",
     url: "https://www.jakash.app",
     siteName: "Jakash",
     images: [{ url: "/og-image.jpg", width: 1200, height: 630, alt: "Jakash: organize seu dinheiro com IA" }],

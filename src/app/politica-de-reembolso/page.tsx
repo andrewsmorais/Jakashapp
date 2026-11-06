@@ -12,7 +12,7 @@ export default function ReembolsoPage() {
   return (
     <LegalPage path="/politica-de-reembolso" title="Política de reembolso" subtitle="Cancelar é simples e sem multa.">
       <h2>1. Teste grátis</h2>
-      <p>No site, todo plano começa com <strong>7 dias grátis, sem cadastrar cartão</strong>. Se você cancelar antes do fim do teste, nada é cobrado. O teste grátis não vale para assinaturas feitas pelo app para iPhone (veja a seção 9).</p>
+      <p>Os planos Mensal e Anual começam com <strong>7 dias grátis</strong>. Se você cancelar até 24 horas antes do fim do teste, nada é cobrado. O cancelamento é feito nos Ajustes do iPhone › seu nome › Assinaturas (veja a seção 9).</p>
 
       <h2>2. Cancelamento</h2>
       <p>Você pode cancelar a renovação quando quiser, sem multa, em <strong>Configurações › Planos › Cancelar renovação</strong>. Depois de cancelar, você continua usando o Jakash até o fim do período já pago e não será cobrado de novo. Se a assinatura foi feita pela App Store, cancele em <strong>Ajustes do iPhone › seu nome › Assinaturas</strong>.</p>

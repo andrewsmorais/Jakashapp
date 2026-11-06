@@ -27,9 +27,9 @@ type Account = { id: string; name: string; kind: string; balance: number; instit
 const COLORS = ["#5B5BF0", "#8B5CF6", "#38BDF8", "#F59E0B", "#10B981", "#EC4899", "#94A3B8"];
 type Tab = "expense" | "income" | "pending";
 
+// Saudação fixa (sem "bom dia/boa tarde/boa noite").
 function greeting() {
-  const h = new Date().getHours();
-  return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
+  return "Olá, tudo bem?";
 }
 
 function Kpi({ icon: Icon, label, value, tone, hint }: { icon: typeof Landmark; label: string; value: string; tone: string; hint?: string }) {
@@ -138,7 +138,7 @@ export default function DashboardPage() {
     <div className="max-w-5xl mx-auto pb-10">
       <div className="flex items-start justify-between mb-5">
         <div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{greeting()},</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{greeting()}</p>
           <h1 className="text-2xl md:text-3xl font-extrabold">{name || "bem-vindo"} 👋</h1>
         </div>
         <button onClick={toggle} aria-label={hide ? "Mostrar valores" : "Esconder valores"} className="w-10 h-10 rounded-full bg-white/80 dark:bg-[#161616] border border-white/80 dark:border-white/5 flex items-center justify-center text-gray-500">

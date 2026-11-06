@@ -129,10 +129,8 @@ console.log(`ok: ${pass} testes`);
 
 // Pacote MEI só no Empresarial (teste grátis libera tudo).
 import { meiLocked } from "../src/lib/plans";
-assert.equal(meiLocked({ plan: "cpf", status: "active" }), true);
-assert.equal(meiLocked({ plan: "familia", status: "active" }), true);
-assert.equal(meiLocked({ plan: "mei", status: "active" }), false);
-assert.equal(meiLocked({ plan: "cpf", status: "trial" }), false);
+// Com um plano só, o pacote MEI não fica mais bloqueado por plano.
+assert.equal(meiLocked({ plan: "mensal", status: "active" }), false);
 assert.equal(meiLocked(null), false);
 console.log("ok: pacote MEI por plano");
 

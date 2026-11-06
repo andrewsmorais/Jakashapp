@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     }
 
     const plan = planFromAppleProduct(result.tx.productId);
-    const ev = billingEventFor(result.status, plan);
+    const ev = billingEventFor(result.status, plan, result.patch.subscription_status === 'trial');
     if (ev && result.tx.transactionId) await recordAppleBillingEvent(admin, { userId: profile.id, transactionId: result.tx.transactionId, kind: ev.kind, plan, amount: ev.amount });
     return NextResponse.json({ ok: true });
   } catch (error) {

@@ -25,11 +25,11 @@ export default function TermosPage() {
       </ul>
 
       <h2>3. Planos, teste grátis e pagamento</h2>
-      <p>Os planos, valores e o que cada um inclui estão na página inicial e em Configurações › Planos. Os valores podem mudar, mas a alteração só vale para a renovação seguinte e depois de avisarmos você.</p>
+      <p>Para usar o Jakash é preciso assinar o plano Mensal ou o Anual. Os valores e o que a assinatura inclui estão na página inicial e em Configurações › Planos e assinatura. Os valores podem mudar, mas a alteração só vale para a renovação seguinte e depois de avisarmos você.</p>
       <ul>
-        <li><strong>Teste grátis:</strong> 7 dias, sem cadastrar cartão. Ao escolher um plano, a cobrança mensal começa ao fim do teste.</li>
-        <li><strong>Cobrança:</strong> mensal e recorrente, por Pix, cartão ou boleto, processada pelo Asaas. Você informa CPF ou CNPJ para a emissão da cobrança.</li>
-        <li><strong>Troca de plano:</strong> você pode mudar de plano em Configurações › Planos. O novo valor vale a partir da próxima renovação.</li>
+        <li><strong>Teste grátis:</strong> os dois planos começam com 7 dias grátis. Se você não cancelar até 24 horas antes do fim do teste, a cobrança começa ao fim dele.</li>
+        <li><strong>Cobrança:</strong> recorrente (todo mês no Mensal, todo ano no Anual), feita pela Apple na sua conta da App Store, ao assinar pelo app para iPhone.</li>
+        <li><strong>Troca de plano:</strong> você troca entre Mensal e Anual nos Ajustes do iPhone › seu nome › Assinaturas, conforme as regras da Apple.</li>
         <li><strong>Atraso:</strong> se o pagamento não for confirmado, o acesso pode ser limitado até a regularização.</li>
       </ul>
       <p><strong>Assinatura feita no app para iPhone:</strong> quando você assina pelo app, a cobrança é feita pela sua conta da Apple (App Store). O pagamento é debitado na confirmação da compra e a assinatura renova sozinha todo mês, pelo mesmo valor, a menos que seja cancelada pelo menos 24 horas antes do fim do período. Você gerencia e cancela em Ajustes do iPhone › seu nome › Assinaturas, e os pedidos de reembolso seguem as regras da Apple. Teste grátis e formas de pagamento do site (Pix e boleto) não valem para assinaturas feitas pela App Store.</p>

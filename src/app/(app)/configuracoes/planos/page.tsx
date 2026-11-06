@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { Clock, ExternalLink } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { PLANS, canonicalPlan, planPrice, type PlanId } from "@/lib/plans";
+import { PlanPicker } from "@/components/PlanPicker";
 import { formatDateBR } from "@/lib/format";
-import { IapPaywall } from "@/components/IapPaywall";
 import { useIsNative } from "@/lib/useIsNative";
 import { IOS_IAP_ENABLED } from "@/lib/native";
 import { MANAGE_SUBSCRIPTIONS_URL } from "@/lib/nativePurchases";
@@ -16,7 +16,8 @@ type PlanInfo = { billingProvider: "apple" | null };
 type Profile = { subscription_status: string; subscription_plan: string | null; subscription_expires_at: string | null };
 
 const STATUS: Record<string, { label: string; tone: string }> = {
-  trial: { label: "Em teste", tone: "bg-sky-500/15 text-sky-600" },
+  trial: { label: "7 dias grátis", tone: "bg-sky-500/15 text-sky-600" },
+  none: { label: "Sem assinatura", tone: "bg-gray-500/15 text-gray-500" },
   active: { label: "Ativa", tone: "bg-emerald-500/15 text-emerald-600" },
   past_due: { label: "Em atraso", tone: "bg-amber-500/15 text-amber-600" },
   unpaid: { label: "Pendente", tone: "bg-amber-500/15 text-amber-600" },
@@ -45,16 +46,17 @@ export default function PlanosPage() {
   }, [ready, userId]);
 
   const st = STATUS[profile?.subscription_status ?? ""] ?? { label: "Sem assinatura", tone: "bg-gray-500/15 text-gray-500" };
-  // 'familia' (plano antigo, não é mais vendido) aparece como Pessoal.
+  // Planos antigos (cpf, mei, familia) aparecem como Mensal.
   const planKey: PlanId | null = canonicalPlan(profile?.subscription_plan);
   const viaApple = planInfo?.billingProvider === "apple";
   const canceled = profile?.subscription_status === "canceled";
-  const showPlansTab = iap;
+  // Aba Planos: no app (compra pela App Store) e no site (mostra os planos e manda para o app do iPhone).
+  const showPlansTab = iap || !native;
   const activeTab = showPlansTab ? tab : "sub";
 
   return (
     <div className="max-w-xl mx-auto pb-20">
-      <BackTitle title="Planos" subtitle="Seu plano e a sua assinatura." href="/configuracoes" />
+      <BackTitle title="Planos e assinatura" subtitle="Seu plano e a sua assinatura." href="/configuracoes" />
 
       {showPlansTab && <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#161616] mb-5">
         {([["sub", "Assinatura"], ["plans", "Planos"]] as const).map(([k, l]) => (
@@ -73,13 +75,13 @@ export default function PlanosPage() {
             {profile?.subscription_status === "trial" && profile.subscription_expires_at && (
               <p className="text-sm text-sky-700 dark:text-sky-300 bg-sky-500/10 rounded-2xl p-4 mt-4">
                 Seu período de teste está ativo até {formatDateBR(profile.subscription_expires_at.slice(0, 10))}.
-                {native ? (iap ? " Para continuar depois do teste, escolha um plano na aba Planos." : "") : " Para continuar depois do teste, assine pelo app do Jakash na App Store."}
+                {" "}Se não cancelar antes, a cobrança começa no fim do teste, pela sua conta Apple.
               </p>
             )}
             {planKey && (
               <dl className="mt-4 space-y-2 text-sm border-t border-gray-100 dark:border-[#262626] pt-4">
                 <div className="flex justify-between"><dt className="text-gray-500">Plano</dt><dd className="font-bold">{PLANS[planKey].name}</dd></div>
-                {!native && <div className="flex justify-between"><dt className="text-gray-500">Valor</dt><dd className="font-bold">{planPrice(planKey)} / mês</dd></div>}
+                {!native && <div className="flex justify-between"><dt className="text-gray-500">Valor</dt><dd className="font-bold">{planPrice(planKey)} / {planKey === "anual" ? "ano" : "mês"}</dd></div>}
                 {profile?.subscription_expires_at && <div className="flex justify-between"><dt className="text-gray-500">{profile.subscription_status === "trial" ? "Fim do teste" : "Próxima renovação"}</dt><dd className="font-bold">{formatDateBR(profile.subscription_expires_at.slice(0, 10))}</dd></div>}
               </dl>
             )}
@@ -92,15 +94,16 @@ export default function PlanosPage() {
             {!viaApple && (!planKey || canceled) && !native && (
               <p className="text-sm text-gray-600 dark:text-gray-300 mt-4">A assinatura é feita pelo app do Jakash na App Store. Entre nele com esta mesma conta e o plano vale aqui também.</p>
             )}
-            {!viaApple && iap && <button onClick={() => setTab("plans")} className={btnGhostCls + " w-full mt-4 !py-3"}>Ver planos</button>}
+            {!viaApple && showPlansTab && <button onClick={() => setTab("plans")} className={btnGhostCls + " w-full mt-4 !py-3"}>Ver planos</button>}
             {msg && <p className="text-sm text-emerald-600 font-bold mt-3">{msg}</p>}
           </Card>
         </div>
       )}
 
-      {activeTab === "plans" && iap && (
+      {activeTab === "plans" && showPlansTab && (
         planInfo === null ? <Empty>Carregando…</Empty>
-        : userId ? <IapPaywall userId={userId} currentPlan={planKey} subscribedViaApple={viaApple} onPurchased={() => { setMsg("Assinatura ativada. Obrigado!"); setTab("sub"); load(); }} /> : null
+        : userId ? <PlanPicker userId={userId} mode={iap ? "iap" : "web"} currentPlan={planKey} subscribedViaApple={viaApple}
+            onPurchased={() => { setMsg("Assinatura ativada. Obrigado!"); setTab("sub"); load(); }} onRecheck={() => { setTab("sub"); load(); }} /> : null
       )}
     </div>
   );

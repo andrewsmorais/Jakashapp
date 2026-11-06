@@ -10,9 +10,9 @@ import { NAV_FOOTER, groupsFor } from "@/lib/nav";
 
 type Tile = { icon: LucideIcon; label: string; href: string };
 
+// Saudação fixa (sem "bom dia/boa tarde/boa noite").
 function greeting() {
-  const h = new Date().getHours();
-  return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
+  return "Olá, tudo bem?";
 }
 
 export default function MenuPage() {

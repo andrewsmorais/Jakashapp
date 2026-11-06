@@ -1,4 +1,4 @@
-import { PLANS, PLAN_IDS, planPrice } from "@/lib/plans";
+import { PLANS, PLAN_IDS, TRIAL_DAYS, annualSavingsPct, planPrice } from "@/lib/plans";
 
 export const SITE_URL = "https://www.jakash.app";
 export const INSTAGRAM_URL = "https://www.instagram.com/jakashfinancas/";
@@ -16,11 +16,11 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Quais são os planos e os preços do Jakash?",
-    a: `Há dois planos, os dois com 7 dias grátis: ${PLAN_IDS.map((id) => `${PLANS[id].name} por ${planPrice(id)}/mês`).join(" e ")}. O Pessoal tem tudo para as finanças pessoais (lançamentos, cartões, contas a pagar, limites, objetivos, dívidas, investimentos, planejamento, Chat da Jaki e Motorista de app) e permite dividir com até ${PLANS.cpf.members} pessoas. O Empresarial inclui tudo do Pessoal mais o pacote MEI.`,
+    a: `Um plano só, com duas formas de pagar, as duas com ${TRIAL_DAYS} dias grátis: ${PLANS.mensal.short} por ${planPrice("mensal")}/mês ou ${PLANS.anual.short} por ${planPrice("anual")}/ano (sai ${annualSavingsPct()}% mais barato). Inclui tudo: lançamentos, cartões, contas a pagar, supermercado, Motorista de app, limites, objetivos, dívidas, investimentos, Chat da Jaki e dividir com até ${PLANS.mensal.members} pessoas. A assinatura é feita no app do iPhone, pela App Store.`,
   },
   {
     q: "O Jakash é gratuito?",
-    a: "O Jakash oferece 7 dias de teste grátis, sem cadastrar cartão de crédito. Depois disso, é preciso escolher um plano pago. Você pode cancelar a qualquer momento, sem multa.",
+    a: "Não. Para usar, é preciso escolher o plano Mensal ou Anual, e os dois começam com 7 dias grátis. A cobrança só acontece depois do teste, pela sua conta Apple, e você pode cancelar antes sem pagar nada.",
   },
   {
     q: "Funciona com o meu banco?",
@@ -32,11 +32,11 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Posso dividir as finanças com minha família ou sócio?",
-    a: `Sim. Nos dois planos você convida até ${PLANS.cpf.members - 1} pessoas para a mesma casa, e todos veem e editam contas, lançamentos, limites e objetivos compartilhados. Perfil, assinatura e conversas do chat continuam privados.`,
+    a: `Sim. Você convida até ${PLANS.mensal.members - 1} pessoas para a mesma casa, e todos veem e editam contas, lançamentos, limites e objetivos compartilhados. Perfil, assinatura e conversas do chat continuam privados.`,
   },
   {
     q: "O Jakash serve para MEI?",
-    a: "Sim. O plano Empresarial inclui o pacote MEI: controle do limite anual, DAS e DASN, clientes e valores a receber, cobrança por Pix, recibos e relatório mensal, calculadora de preço e acesso do contador. O Jakash não emite nota fiscal.",
+    a: "Sim. A assinatura inclui o pacote MEI: controle do limite anual, DAS e DASN, clientes e valores a receber, cobrança por Pix, recibos e relatório mensal, calculadora de preço e acesso do contador. O Jakash não emite nota fiscal.",
   },
   {
     q: "Como cancelo minha assinatura?",

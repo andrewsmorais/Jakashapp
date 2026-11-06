@@ -1,10 +1,15 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
-import { isNativeUserAgent } from '@/lib/native';
 
-// Renova a sessão do Supabase a cada acesso e manda para o login quem não está logado nas telas do app.
-// As rotas /api cuidam da própria autenticação; páginas públicas (login, cadastro, contador, etc.) ficam livres.
-const PROTECTED = ['/dashboard', '/transacoes', '/contas-bancarias', '/cartoes', '/parcelamentos', '/comprar', '/viagem', '/relatorios', '/planejamento', '/limites', '/contas', '/dividas', '/metas', '/reserva', '/investimentos', '/chat', '/importar', '/mei', '/menu', '/categorias', '/configuracoes', '/bem-vindo', '/simulador'];
+// Renova a sessão do Supabase a cada acesso. Nas telas do app:
+//  1) sem login -> /login;
+//  2) logado mas sem assinatura (Mensal ou Anual) -> /assinar. Só o dono (is_admin) entra sem assinar.
+// A regra de quem pode entrar fica no banco (função has_app_access). As rotas /api cuidam da própria autenticação;
+// páginas públicas (login, cadastro, contador, termos etc.) ficam livres.
+const PROTECTED = ['/motorista', '/admin', '/dashboard', '/transacoes', '/contas-bancarias', '/cartoes', '/parcelamentos', '/comprar', '/viagem', '/relatorios', '/planejamento', '/limites', '/contas', '/dividas', '/metas', '/reserva', '/investimentos', '/chat', '/importar', '/mei', '/menu', '/categorias', '/configuracoes', '/bem-vindo', '/simulador'];
+
+// Telas do app que abrem mesmo sem assinatura.
+const NO_PLAN_OK = ['/configuracoes/dados'];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -26,15 +31,17 @@ export async function middleware(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const isProtected = PROTECTED.some((p) => path === p || path.startsWith(p + '/'));
-  // App iOS (User-Agent "JakashApp/"): login sempre obrigatório (guideline 3.1.1/3.1.3 da Apple).
-  const native = isNativeUserAgent(request.headers.get('user-agent'));
   // Não há landing neste repositório (ela fica em outro): quem abre o endereço do app cai no painel (logado) ou no login.
   if (path === '/') return NextResponse.redirect(new URL((user ? '/dashboard' : '/login') + request.nextUrl.search, request.url));
-  // No site, o bloqueio das telas só vale com NEXT_PUBLIC_REQUIRE_LOGIN=1 (por enquanto o login é de entrada livre).
-  if (isProtected && !user && (native || process.env.NEXT_PUBLIC_REQUIRE_LOGIN === '1')) {
+  if ((isProtected || path === '/assinar') && !user) {
     const login = new URL('/login', request.url);
     login.searchParams.set('next', path + request.nextUrl.search);
     return NextResponse.redirect(login);
+  }
+  // Sem assinatura não entra. Exceção: Configurações › Dados, para a pessoa poder excluir a conta (regra da Apple).
+  if (isProtected && user && !NO_PLAN_OK.some((p) => path === p || path.startsWith(p + '/'))) {
+    const { data: allowed, error } = await supabase.rpc('has_app_access');
+    if (error || allowed !== true) return NextResponse.redirect(new URL('/assinar', request.url));
   }
   if (user && (path === '/login' || path === '/cadastro')) return NextResponse.redirect(new URL('/dashboard', request.url));
   return response;

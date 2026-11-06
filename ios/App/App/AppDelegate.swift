@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import WebKit
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -49,5 +50,25 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                                           sessionRole: connectingSceneSession.role)
         config.delegateClass = SceneDelegate.self
         return config
+    }
+}
+
+// Tela principal do app (o storyboard Main aponta para esta classe).
+// Lê o ajuste "Reduzir transparência" do iPhone (Ajustes > Acessibilidade > Tela e Tamanho do Texto) e avisa a página,
+// que então tira o efeito vidro (src/lib/solid.ts). O Safari/WKWebView não expõe esse ajuste para a web sozinho.
+class MainViewController: CAPBridgeViewController {
+    override func capacitorDidLoad() {
+        super.capacitorDidLoad()
+        // Antes de cada página carregar: o valor atual fica disponível já na primeira pintura.
+        let js = "window.__JAKASH_OS_REDUCE_TRANSPARENCY = \(UIAccessibility.isReduceTransparencyEnabled);"
+        webView?.configuration.userContentController.addUserScript(WKUserScript(source: js, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        NotificationCenter.default.addObserver(self, selector: #selector(reduceTransparencyChanged), name: UIAccessibility.reduceTransparencyStatusDidChangeNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(reduceTransparencyChanged), name: UIApplication.didBecomeActiveNotification, object: nil)
+    }
+
+    // A pessoa mudou o ajuste com o app aberto (ou voltou para o app): atualiza a página na hora.
+    @objc private func reduceTransparencyChanged() {
+        let on = UIAccessibility.isReduceTransparencyEnabled
+        webView?.evaluateJavaScript("window.__JAKASH_OS_REDUCE_TRANSPARENCY = \(on); window.dispatchEvent(new Event('jakash:os-transparency'));", completionHandler: nil)
     }
 }

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { PWARegister } from "@/components/PWA";
+import { SolidWatcher } from "@/components/SolidWatcher";
 import { RefCapture } from "@/components/Referral";
 import { NativeBridge } from "@/components/NativeBridge";
 import { Plus_Jakarta_Sans } from "next/font/google";
@@ -54,9 +55,12 @@ export default function RootLayout({
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: "try{var a=localStorage.getItem('jakash-accent');if(a)document.documentElement.dataset.accent=a}catch(e){}" }} />
+        {/* Sem efeito vidro já na primeira pintura (ver src/lib/solid.ts). */}
+        <script dangerouslySetInnerHTML={{ __html: "try{var s=localStorage.getItem('jakash-solid');var o=window.__JAKASH_OS_REDUCE_TRANSPARENCY===true||(window.matchMedia&&matchMedia('(prefers-reduced-transparency: reduce)').matches);if(s==='1'||(s!=='0'&&o))document.documentElement.dataset.solid='1'}catch(e){}" }} />
       </head>
       <body className={`${jakarta.variable} font-sans antialiased overflow-x-hidden selection:bg-primary selection:text-white`}>
         <PWARegister />
+        <SolidWatcher />
         <RefCapture />
         <NativeBridge />
         {children}

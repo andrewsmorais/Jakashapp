@@ -5,6 +5,7 @@ import { Check, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useSupabase } from "@/lib/useSupabase";
 import { applyAccent, isAccent, storedAccent } from "@/lib/accent";
+import { osReducesTransparency, setSolid, storedSolid, type SolidMode } from "@/lib/solid";
 import { BackTitle, Card } from "@/components/ui/page";
 
 const ACCENTS = [
@@ -23,6 +24,14 @@ export default function AparenciaPage() {
   const { supabase, userId } = useSupabase();
   const [accent, setAccent] = useState("violet");
   const [note, setNote] = useState<string | null>(null);
+  const [solid, setSolidMode] = useState<SolidMode>("auto");
+  const [osSolid, setOsSolid] = useState(false);
+  useEffect(() => {
+    const read = () => { setSolidMode(storedSolid()); setOsSolid(osReducesTransparency()); };
+    read();
+    window.addEventListener("jakash:os-transparency", read);
+    return () => window.removeEventListener("jakash:os-transparency", read);
+  }, []);
 
   useEffect(() => {
     const read = () => setAccent(document.documentElement.dataset.accent || storedAccent() || "violet");
@@ -58,6 +67,18 @@ export default function AparenciaPage() {
             </button>
           ))}
         </div>
+      </Card>
+
+      <Card className="mb-4">
+        <p className="font-extrabold">Efeito vidro</p>
+        <p className="text-sm text-gray-500 mb-3">Barras e botões transparentes com desfoque. Se atrapalhar a leitura, deixe tudo sólido.</p>
+        <div className="grid grid-cols-3 gap-1 p-1 rounded-2xl glass-track" role="radiogroup" aria-label="Efeito vidro">
+          {([["auto", "Automático"], ["off", "Com vidro"], ["on", "Sólido"]] as const).map(([k, l]) => (
+            <button key={k} type="button" role="radio" aria-checked={solid === k} onClick={() => { setSolid(k); setSolidMode(k); }}
+              className={`py-2.5 rounded-xl text-sm font-bold ${solid === k ? "glass-pill" : "text-gray-500"}`}>{l}</button>
+          ))}
+        </div>
+        <p className="text-xs text-gray-500 mt-2">{solid === "auto" ? `Automático segue o ajuste "Reduzir transparência" do iPhone (Ajustes › Acessibilidade › Tela e Tamanho do Texto). Agora: ${osSolid ? "sólido" : "com vidro"}.` : "Vale só neste aparelho."}</p>
       </Card>
 
       <Card>

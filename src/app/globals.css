@@ -169,7 +169,15 @@ html[data-accent="slate"] {
     background: rgba(48, 48, 48, 0.6);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.08), 0 2px 10px rgba(0, 0, 0, 0.4);
   }
-  /* Quem pediu menos transparência no iPhone (Acessibilidade) vê as barras sólidas. */
+  /* Sem efeito vidro: quando a pessoa liga "Reduzir transparência" (no iPhone, lido pelo app nativo; ou na tela Aparência).
+     O atributo data-solid no <html> é posto por src/lib/solid.ts. O @media cobre os navegadores que entendem o ajuste (Chrome). */
+  html[data-solid] .glass-bar, html[data-solid] .glass-btn, html[data-solid] .glass-track, html[data-solid] .glass-pill,
+  html[data-solid] [class*="backdrop-blur"] { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+  html[data-solid] .glass-bar, html[data-solid] .glass-btn, html[data-solid] .glass-pill, html[data-solid] .bg-white\/75 { background: #fff !important; }
+  html[data-solid] .glass-track { background: #EEF0FB !important; }
+  html.dark[data-solid] .glass-bar, html.dark[data-solid] .glass-btn, html.dark[data-solid] .glass-pill { background: #262626 !important; }
+  html.dark[data-solid] .glass-track, html.dark[data-solid] .bg-white\/75 { background: #161616 !important; }
+  html[data-solid] .glass-shine::before { display: none; }
   @media (prefers-reduced-transparency: reduce) {
     .glass-bar, .glass-btn, .glass-track, .glass-pill { -webkit-backdrop-filter: none; backdrop-filter: none; background: #fff !important; }
     .glass-track { background: #EEF0FB !important; }

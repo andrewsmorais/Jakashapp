@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { cardUsed, dueDateFor, invoiceMonthFor, type InvoiceRow } from '@/lib/cards';
 import { limitForYear, limitStatus, planLimit, profitSummary, toSummary } from '@/lib/mei';
-import { SHIFT_COLUMNS, normalizeShift, summarize } from '@/lib/driver';
+import { MAINT_COLUMNS, SHIFT_COLUMNS, maintenanceTotal, normalizeMaintenance, normalizeShift, summarize, withMaintenance } from '@/lib/driver';
 import { listTotals, type ShopItem } from '@/lib/shopping';
 import { coreOnlyFor, hiddenIds, type CatFull, type VisibilityRow } from '@/lib/categoryVisibility';
 
@@ -28,7 +28,7 @@ type Tx = { description: string; amount: number | string; type: 'income' | 'expe
 // `who` (opcional): para a Jaki só sugerir as categorias que a pessoa deixou à mostra em Categorias.
 export async function buildChatContext(db: SupabaseClient, today: string, who?: { userId: string; createdAt?: string | null }) {
   const { start, end, prevStart, in30 } = bounds(today);
-  const [c, t, a, b, bd, g, d, k, s, iv, pf, vis, ds, sl] = await Promise.all([
+  const [c, t, a, b, bd, g, d, k, s, iv, pf, vis, ds, sl, dm] = await Promise.all([
     db.from('categories').select('id,name,type,parent_id,is_default,user_id'),
     db.from('transactions').select('description,amount,type,date,category_id').gte('date', prevStart).lt('date', end).order('date', { ascending: false }).limit(1500),
     db.rpc('account_balances'),
@@ -43,6 +43,7 @@ export async function buildChatContext(db: SupabaseClient, today: string, who?: 
     who ? db.from('category_visibility').select('category_id,hidden') : Promise.resolve({ data: [], error: null }),
     db.from('driver_shifts').select(SHIFT_COLUMNS).gte('date', start).lt('date', end).limit(400),
     db.from('shopping_lists').select('id,name,budget').eq('status', 'open').eq('is_business', false).order('created_at').limit(1),
+    db.from('driver_maintenance').select(MAINT_COLUMNS).gte('date', start).lt('date', end).limit(400),
   ]);
 
   const cats = (c.data ?? []) as Cat[];
@@ -108,7 +109,10 @@ export async function buildChatContext(db: SupabaseClient, today: string, who?: 
   // Motorista de app: turnos do mês (só aparece para quem registrou turno).
   const shifts = ds.error ? [] : ((ds.data ?? []) as Record<string, unknown>[]).map(normalizeShift);
   const drv = shifts.length ? summarize(shifts) : null;
+  const mech = dm.error ? 0 : maintenanceTotal(((dm.data ?? []) as Record<string, unknown>[]).map(normalizeMaintenance));
+  if (drv) drv.total = withMaintenance(drv.total, mech);
   const motorista = drv ? {
+    gasto_com_mecanica: mech,
     turnos_no_mes: drv.shifts, dias_trabalhados: drv.days, corridas: drv.total.trips, km: drv.total.km, horas: drv.total.hours,
     lucro_bruto: drv.total.gross, despesas: drv.total.expenses, lucro_liquido: drv.total.net,
     lucro_liquido_por_hora: drv.total.netPerHour, lucro_liquido_por_km: drv.total.netPerKm,

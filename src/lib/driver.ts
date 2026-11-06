@@ -276,3 +276,34 @@ export function normalizePlate(input: string): string | null {
 
 /** "ABC1234" -> "ABC-1234"; Mercosul fica como está ("ABC1D23"). */
 export const plateLabel = (p: string): string => (/^[A-Z]{3}[0-9]{4}$/.test(p) ? `${p.slice(0, 3)}-${p.slice(3)}` : p);
+
+// ---------- Mecânica do veículo ----------
+
+export type Maintenance = {
+  id: string; vehicle_id: string | null; date: string; shop: string | null; part: string;
+  part_cost: number; labor_cost: number; tx_id: string | null;
+};
+export const MAINT_COLUMNS = "id,vehicle_id,date,shop,part,part_cost,labor_cost,tx_id";
+
+export function normalizeMaintenance(r: Record<string, unknown>): Maintenance {
+  return {
+    id: String(r.id), vehicle_id: (r.vehicle_id as string | null) ?? null, date: String(r.date),
+    shop: typeof r.shop === "string" && r.shop.trim() ? r.shop : null, part: String(r.part ?? ""),
+    part_cost: num(r.part_cost), labor_cost: num(r.labor_cost), tx_id: (r.tx_id as string | null) ?? null,
+  };
+}
+
+export const maintenanceCost = (m: Pick<Maintenance, "part_cost" | "labor_cost">): number => r2(m.part_cost + m.labor_cost);
+
+/** Total gasto com mecânica (opcionalmente só de um veículo). */
+export function maintenanceTotal(list: Maintenance[], vehicleId?: string | null): number {
+  return r2(list.filter((m) => !vehicleId || m.vehicle_id === vehicleId).reduce((s, m) => s + maintenanceCost(m), 0));
+}
+
+/** Resultado do período com a mecânica somada às despesas (lucro líquido, por hora e por km recalculados). */
+export function withMaintenance(t: Metrics, mech: number): Metrics {
+  if (!(mech > 0)) return t;
+  const expenses = r2(t.expenses + mech);
+  const net = r2(t.gross - expenses);
+  return { ...t, expenses, net, netPerHour: div(net, t.hours), netPerKm: div(net, t.km), costPerKm: div(expenses, t.km) };
+}

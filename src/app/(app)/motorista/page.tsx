@@ -3,15 +3,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSupabase } from "@/lib/useSupabase";
 import { brl, formatDateBR, todayISO } from "@/lib/format";
-import { SHIFT_COLUMNS, VEHICLE_COLUMNS, normalizeShift, normalizeVehicle, shiftMetrics, type Shift, type Vehicle } from "@/lib/driver";
+import { MAINT_COLUMNS, SHIFT_COLUMNS, VEHICLE_COLUMNS, normalizeMaintenance, normalizeShift, normalizeVehicle, shiftMetrics, type Maintenance, type Shift, type Vehicle } from "@/lib/driver";
 import { platformOf } from "@/lib/driverPlatforms";
 import { ShiftForm, type LastUsed } from "@/components/driver/ShiftForm";
 import { ResultsPanel, type Period } from "@/components/driver/ResultsPanel";
 import { VehiclesPanel } from "@/components/driver/VehiclesPanel";
 import { TurnosPanel } from "@/components/driver/TurnosPanel";
+import { MaintenancePanel } from "@/components/driver/MaintenancePanel";
 import { BackTitle, Card, Empty, ErrorNote, Label, btnCls, btnGhostCls, inputCls } from "@/components/ui/page";
 
-type Tab = "turnos" | "resultados" | "carros";
+type Tab = "turnos" | "resultados" | "mecanica" | "carros";
 type Preset = "hoje" | "semana" | "mes" | "custom";
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -40,6 +41,7 @@ export default function MotoristaPage() {
   const [newVehicle, setNewVehicle] = useState(0);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
+  const [maint, setMaint] = useState<Maintenance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [setupNeeded, setSetupNeeded] = useState(false);
@@ -67,6 +69,12 @@ export default function MotoristaPage() {
     setShifts(((data ?? []) as Record<string, unknown>[]).map(normalizeShift));
   }, [supabase, period.from, period.to]);
 
+  // Gastos com mecânica do período (tabela nova: se ainda não existir, a tela segue sem eles).
+  const loadMaint = useCallback(async () => {
+    const { data, error: err } = await supabase.from("driver_maintenance").select(MAINT_COLUMNS).gte("date", period.from).lte("date", period.to).order("date", { ascending: false }).order("created_at", { ascending: false }).limit(1000);
+    setMaint(err ? [] : ((data ?? []) as Record<string, unknown>[]).map(normalizeMaintenance));
+  }, [supabase, period.from, period.to]);
+
   // Histórico do menu Turnos: o dia escolhido ou os mais recentes.
   const loadTurnos = useCallback(async () => {
     const req = ++turnosReq.current; // resposta de um filtro antigo não sobrescreve a do filtro atual
@@ -89,8 +97,8 @@ export default function MotoristaPage() {
 
   useEffect(() => {
     if (!ready || !userId) return;
-    Promise.all([loadVehicles(), loadShifts(), loadLast()]).then(() => setLoading(false));
-  }, [ready, userId, loadVehicles, loadShifts, loadLast]);
+    Promise.all([loadVehicles(), loadShifts(), loadMaint(), loadLast()]).then(() => setLoading(false));
+  }, [ready, userId, loadVehicles, loadShifts, loadMaint, loadLast]);
 
   useEffect(() => { if (ready && userId) loadTurnos(); }, [ready, userId, loadTurnos]);
 
@@ -119,13 +127,13 @@ export default function MotoristaPage() {
 
   return (
     <div className="max-w-3xl mx-auto pb-24">
-      <BackTitle title="Motorista de app" subtitle="Registre cada turno: quanto rodou, quanto ganhou e quanto gastou. Os resultados usam só os turnos." />
+      <BackTitle title="Motorista de app" subtitle="Registre cada turno e os gastos com mecânica: veja quanto ganhou, gastou e lucrou." />
 
       {setupNeeded ? <Card><Empty>Esta área fica disponível depois da próxima atualização do app.</Empty></Card> : (
         <>
-          <div className="grid grid-cols-3 gap-2 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#161616] mb-4">
-            {([["turnos", "Turnos"], ["resultados", "Relatórios"], ["carros", "Meus veículos"]] as const).map(([k, l]) => (
-              <button key={k} onClick={() => { setTab(k); setSaved(null); setNewVehicle(0); if (k !== "turnos") { setFormOpen(false); setEditing(null); } }} className={`py-2.5 rounded-xl text-sm font-bold ${tab === k ? "bg-white dark:bg-[#262626] shadow-sm" : "text-gray-500"}`}>{l}</button>
+          <div className="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#161616] mb-4">
+            {([["turnos", "Turnos"], ["resultados", "Relatórios"], ["mecanica", "Mecânica"], ["carros", "Veículos"]] as const).map(([k, l]) => (
+              <button key={k} onClick={() => { setTab(k); setSaved(null); setNewVehicle(0); if (k !== "turnos") { setFormOpen(false); setEditing(null); } }} className={`py-2.5 rounded-xl text-xs sm:text-sm font-bold ${tab === k ? "bg-white dark:bg-[#262626] shadow-sm" : "text-gray-500"}`}>{l}</button>
             ))}
           </div>
 
@@ -143,7 +151,7 @@ export default function MotoristaPage() {
             </>
           )}
 
-          {tab === "resultados" && (
+          {(tab === "resultados" || tab === "mecanica") && (
             <>
               <Card className="mb-4 !p-4 space-y-3">
                 <div className="flex gap-2 overflow-x-auto -mx-1 px-1">
@@ -165,8 +173,12 @@ export default function MotoristaPage() {
                 )}
                 <p className="text-xs text-gray-400">{formatDateBR(period.from)} a {formatDateBR(period.to)}</p>
               </Card>
-              <ResultsPanel shifts={shifts} vehicles={vehicles} period={period} platform={platform} vehicleId={vehicleId} onPlatform={setPlatform}
-                onEdit={openEdit} onDelete={remove} onLaunch={setLaunching} error={error} />
+              {tab === "resultados" ? (
+                <ResultsPanel shifts={shifts} maintenance={maint} vehicles={vehicles} period={period} platform={platform} vehicleId={vehicleId} onPlatform={setPlatform}
+                  onEdit={openEdit} onDelete={remove} onLaunch={setLaunching} error={error} />
+              ) : (
+                <MaintenancePanel supabase={supabase} userId={userId!} vehicles={vehicles} items={maint} vehicleId={vehicleId} onChanged={loadMaint} />
+              )}
             </>
           )}
 

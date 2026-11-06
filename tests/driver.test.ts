@@ -1,7 +1,7 @@
 // Testes offline do Motorista de app: horas, combustível, ganho por hora/km, divisão por plataforma e exportação.
 // Rodar: npm run test:driver
 import assert from "node:assert/strict";
-import { flexAdvice, fuelCost, normalizeVehicle, vehicleFuelFor, normalizeShift, platformShare, shiftMetrics, summarize, workedHours, turnoSummary, turnoMissing, kmOf, type Shift } from "../src/lib/driver";
+import { withMaintenance, maintenanceTotal, flexAdvice, fuelCost, normalizeVehicle, vehicleFuelFor, normalizeShift, platformShare, shiftMetrics, summarize, workedHours, turnoSummary, turnoMissing, kmOf, type Shift } from "../src/lib/driver";
 import { platformKeyFromName, platformOf, quantityLabel } from "../src/lib/driverPlatforms";
 import { driverCsv } from "../src/lib/driverExport";
 
@@ -170,4 +170,18 @@ console.log("ok: pacote MEI por plano");
   assert.equal(dois.days, 1);
   assert.equal(dois.shifts, 2);
   console.log("ok: turnos");
+}
+
+// Mecânica entra nas despesas e no lucro líquido do período.
+{
+  const base = { hours: 10, km: 200, trips: 20, gross: 500, tips: 0, fuel: 100, vehicle: 0, extras: 0, expenses: 100, net: 400, grossPerHour: 50, netPerHour: 40, grossPerKm: 2.5, netPerKm: 2, costPerKm: 0.5 };
+  const m = withMaintenance(base, 150);
+  if (m.expenses !== 250 || m.net !== 250 || m.netPerHour !== 25 || m.netPerKm !== 1.25) { console.error('FALHOU: withMaintenance', m); process.exitCode = 1; }
+  if (withMaintenance(base, 0) !== base) { console.error('FALHOU: withMaintenance sem gasto'); process.exitCode = 1; }
+  const list = [
+    { id: 'a', vehicle_id: 'v1', date: '2026-11-01', shop: null, part: 'Pneu', part_cost: 300, labor_cost: 40, tx_id: null },
+    { id: 'b', vehicle_id: 'v2', date: '2026-11-02', shop: 'Oficina', part: 'Freio', part_cost: 120.5, labor_cost: 0, tx_id: null },
+  ];
+  if (maintenanceTotal(list) !== 460.5 || maintenanceTotal(list, 'v1') !== 340) { console.error('FALHOU: maintenanceTotal'); process.exitCode = 1; }
+  console.log('ok: mecânica');
 }

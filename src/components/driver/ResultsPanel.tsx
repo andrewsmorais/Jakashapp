@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, FileDown, Pencil, Printer, Send, Trash2 } from "lucide-react";
 import { brl, formatDateBR } from "@/lib/format";
-import { hoursLabel, shiftMetrics, summarize, type Shift, type Vehicle } from "@/lib/driver";
+import { hoursLabel, maintenanceTotal, shiftMetrics, summarize, withMaintenance, type Maintenance, type Shift, type Vehicle } from "@/lib/driver";
 import { platformOf, quantityLabel } from "@/lib/driverPlatforms";
 import { driverCsv, driverFileName } from "@/lib/driverExport";
 import { saveOrShareText } from "@/lib/nativeShare";
@@ -16,8 +16,8 @@ export type Period = { from: string; to: string };
 const perH = (v: number | null) => (v === null ? "—" : `${brl(v)}/h`);
 const perKm = (v: number | null) => (v === null ? "—" : `${brl(v)}/km`);
 
-export function ResultsPanel({ shifts, vehicles, period, platform, vehicleId, onPlatform, onEdit, onDelete, onLaunch, error }: {
-  shifts: Shift[]; vehicles: Vehicle[]; period: Period; platform: string | null; vehicleId: string;
+export function ResultsPanel({ shifts, maintenance = [], vehicles, period, platform, vehicleId, onPlatform, onEdit, onDelete, onLaunch, error }: {
+  shifts: Shift[]; maintenance?: Maintenance[]; vehicles: Vehicle[]; period: Period; platform: string | null; vehicleId: string;
   onPlatform: (p: string | null) => void; onEdit: (s: Shift) => void; onDelete: (s: Shift) => void; onLaunch: (s: Shift) => void; error: string | null;
 }) {
   const filtered = useMemo(() => shifts.filter((s) => !vehicleId || s.vehicle_id === vehicleId), [shifts, vehicleId]);
@@ -25,7 +25,9 @@ export function ResultsPanel({ shifts, vehicles, period, platform, vehicleId, on
   const sum = useMemo(() => summarize(filtered, platform), [filtered, platform]);
   const all = useMemo(() => (platform ? summarize(filtered) : sum), [filtered, platform, sum]);
   const list = platform ? filtered.filter((s) => s.earnings.some((e) => e.platform === platform)) : filtered;
-  const t = sum.total;
+  // Mecânica não é de uma plataforma: só entra quando estão todas as plataformas.
+  const mech = platform ? 0 : maintenanceTotal(maintenance, vehicleId || null);
+  const t = withMaintenance(sum.total, mech);
   const [exporting, setExporting] = useState(false);
   const vName = vehicles.find((v) => v.id === vehicleId)?.name ?? null;
 
@@ -67,6 +69,7 @@ export function ResultsPanel({ shifts, vehicles, period, platform, vehicleId, on
               <div><dt className="text-xs text-gray-500">Combustível</dt><dd className="font-extrabold">{brl(t.fuel)}</dd></div>
               <div><dt className="text-xs text-gray-500">Custo do carro</dt><dd className="font-extrabold">{brl(t.vehicle)}</dd></div>
               <div><dt className="text-xs text-gray-500">Outros gastos</dt><dd className="font-extrabold">{brl(t.extras)}</dd></div>
+              <div><dt className="text-xs text-gray-500">Mecânica</dt><dd className="font-extrabold">{platform ? "—" : brl(mech)}</dd></div>
               <div><dt className="text-xs text-gray-500">Gorjetas</dt><dd className="font-extrabold">{brl(t.tips)}</dd></div>
             </dl>
             {platform && <p className="text-[11px] text-gray-400 mt-3">Com uma plataforma escolhida, horas, km e despesas de dias com mais de uma plataforma são divididos pelo que cada uma rendeu (ou pelas horas que você informou).</p>}

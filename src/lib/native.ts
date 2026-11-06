@@ -7,7 +7,7 @@ import { safeNext } from "@/lib/authUtil";
 export const NATIVE_UA_MARK = "JakashApp/";
 
 /** Domínio fixo do site (o app sempre carrega o site de produção). */
-export const NATIVE_SITE = "https://www.jakash.app";
+export const NATIVE_SITE = "https://app.jakash.app";
 
 /** Esquema de URL registrado no Info.plist do app (volta do login com Google). */
 export const NATIVE_SCHEME = "jakash";

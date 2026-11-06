@@ -1,6 +1,6 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
-// App iOS do Jakash: uma casca nativa que carrega o site de verdade (https://www.jakash.app).
+// App iOS do Jakash: uma casca nativa que carrega o app de verdade (https://app.jakash.app). A página de vendas é outro site (www.jakash.app).
 // Tudo que muda no site vale na hora no app, sem nova versão na App Store.
 // A pasta ios-shell só tem a página de "sem conexão" (fallback quando o site não abre).
 const config: CapacitorConfig = {
@@ -9,7 +9,7 @@ const config: CapacitorConfig = {
   webDir: 'ios-shell',
   server: {
     // Quem já está logado é levado para /dashboard pelo middleware (src/middleware.ts).
-    url: 'https://www.jakash.app/login',
+    url: 'https://app.jakash.app/login',
     // Só estes domínios abrem dentro do app; qualquer outro (wa.me, WhatsApp, e-mail...) abre fora.
     allowNavigation: ['www.jakash.app', 'jakash.app', '*.jakash.app'],
     errorPath: 'index.html',

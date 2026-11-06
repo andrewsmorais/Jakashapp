@@ -1,6 +1,6 @@
 # Jakash na App Store (iOS)
 
-Guia para publicar o app iOS do Jakash. O app é uma casca nativa (Capacitor 8) que abre o site `https://www.jakash.app` e acrescenta recursos do iPhone: login com a Apple, notificações nativas, Face ID, compartilhar arquivos, vibração leve e compra de assinatura pela App Store.
+Guia para publicar o app iOS do Jakash. O app é uma casca nativa (Capacitor 8) que abre o site `https://app.jakash.app` e acrescenta recursos do iPhone: login com a Apple, notificações nativas, Face ID, compartilhar arquivos, vibração leve e compra de assinatura pela App Store.
 
 Legenda: **[VOCÊ]** = só o dono consegue fazer (conta, chave, aprovação). **[PRONTO]** = já está no código.
 
@@ -39,13 +39,13 @@ Team ID: `3V989HNC76` (já está no projeto).
    | Jakash Empresarial | `jakash.empresarial.mensal` | R$ 39,90 | 1 (o mais alto) |
 
    (Decisão de 23/10/2026: o Jakash vende só dois planos. Os produtos antigos `jakash.essencial.mensal`, `jakash.familia.mensal` e `jakash.mei.mensal` não devem ser criados: o app não os reconhece.) Para cada uma: nome de exibição (ex.: "Jakash Pessoal"), descrição curta, e a **captura de tela para revisão** (tela de planos do app, depois do primeiro build). Os níveis fazem a troca de plano valer na hora quando sobe e na renovação quando desce.
-6. **Notificações do Servidor (App Store Server Notifications) V2**: em Informações do app, preencha **URL de produção** e **URL de sandbox** com `https://www.jakash.app/api/apple/notifications` e escolha a **Versão 2**.
+6. **Notificações do Servidor (App Store Server Notifications) V2**: em Informações do app, preencha **URL de produção** e **URL de sandbox** com `https://app.jakash.app/api/apple/notifications` e escolha a **Versão 2**.
 7. Preencha a ficha do app com os textos da seção 2 (descrição, palavras-chave, URLs, categoria, classificação etária, Privacidade do app).
 
 ### 1.3 Supabase [VOCÊ]
 
 1. **Authentication > Providers > Apple > Client IDs**: acrescente `com.jakash.app` ao que já está lá (`com.jakash.app.web`), separado por vírgula. É isso que deixa o login nativo da Apple funcionar.
-2. **Authentication > URL Configuration > Redirect URLs**: adicione `https://www.jakash.app/auth/native` (e, se o Supabase recusar o endereço com `?next=`, a forma `https://www.jakash.app/auth/native**`). É a volta do login com o Google no app.
+2. **Authentication > URL Configuration > Redirect URLs**: adicione `https://app.jakash.app/auth/native` (e, se o Supabase recusar o endereço com `?next=`, a forma `https://app.jakash.app/auth/native**`). É a volta do login com o Google no app.
 3. Aplicar a migration (seção 1.6).
 
 ### 1.4 Vercel (Settings > Environment Variables) [VOCÊ]
@@ -237,7 +237,7 @@ Extras se quiser (até 10): Lista de compras (`/comprar`), Chat da Jaki (`/chat`
 
 ## 4. Como funciona por dentro (resumo técnico)
 
-- O app sempre abre `https://www.jakash.app/login`; o site reconhece o app pelo trecho `JakashApp/` no User-Agent (`src/lib/native.ts`, `src/middleware.ts`).
+- O app sempre abre `https://app.jakash.app/login`; o site reconhece o app pelo trecho `JakashApp/` no User-Agent (`src/lib/native.ts`, `src/middleware.ts`).
 - Compra: o app manda só o número da transação para `POST /api/apple/verify`. O servidor consulta a Apple (App Store Server API, produção e depois sandbox) e só libera o plano se o pacote, o produto e o dono da compra (`appAccountToken` = id do usuário) conferem e a compra não foi estornada nem venceu.
 - Renovação, cancelamento e estorno: a Apple avisa `POST /api/apple/notifications`; o servidor ignora o conteúdo e consulta o estado real na Apple antes de alterar o perfil.
 - Notificações: `src/lib/apns.ts` envia por HTTP/2 com JWT ES256 (chave `.p8`); tokens recusados pela Apple (410 / BadDeviceToken) são apagados.

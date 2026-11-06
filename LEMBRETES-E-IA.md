@@ -20,9 +20,9 @@ Canais sem variável configurada são simplesmente ignorados. Sem nenhum canal, 
 ### Testar
 ```bash
 # Só calcula quem receberia (não envia nem registra nada):
-curl -H "Authorization: Bearer $CRON_SECRET" "https://www.jakash.app/api/cron/reminders?dry=1"
+curl -H "Authorization: Bearer $CRON_SECRET" "https://app.jakash.app/api/cron/reminders?dry=1"
 # Executa de verdade (o mesmo que o cron faz):
-curl -H "Authorization: Bearer $CRON_SECRET" "https://www.jakash.app/api/cron/reminders"
+curl -H "Authorization: Bearer $CRON_SECRET" "https://app.jakash.app/api/cron/reminders"
 ```
 A resposta traz só contagens (elegíveis, com vencimento, enviados/falhas por canal), sem dados pessoais.
 O aviso no aparelho tem botão **Enviar teste** em *Configurações › Notificações*.

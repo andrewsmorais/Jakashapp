@@ -29,7 +29,7 @@ export async function middleware(request: NextRequest) {
   // App iOS (User-Agent "JakashApp/"): login sempre obrigatório (guideline 3.1.1/3.1.3 da Apple).
   const native = isNativeUserAgent(request.headers.get('user-agent'));
   // Não há landing neste repositório (ela fica em outro): quem abre o endereço do app cai no painel (logado) ou no login.
-  if (path === '/') return NextResponse.redirect(new URL(user ? '/dashboard' : '/login', request.url));
+  if (path === '/') return NextResponse.redirect(new URL((user ? '/dashboard' : '/login') + request.nextUrl.search, request.url));
   // No site, o bloqueio das telas só vale com NEXT_PUBLIC_REQUIRE_LOGIN=1 (por enquanto o login é de entrada livre).
   if (isProtected && !user && (native || process.env.NEXT_PUBLIC_REQUIRE_LOGIN === '1')) {
     const login = new URL('/login', request.url);

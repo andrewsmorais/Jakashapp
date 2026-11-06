@@ -246,11 +246,11 @@ ok('/auth/native: link jakash:// só com código válido e next validado', () =>
   assert.equal(buildNativeDeepLink('a'.repeat(601), '/x'), null);
 });
 ok('appUrlOpen: só jakash://auth/callback vira /auth/callback do site', () => {
-  assert.equal(parseNativeCallback('jakash://auth/callback?code=abcdefgh12&next=%2Fcontas'), 'https://www.jakash.app/auth/callback?code=abcdefgh12&next=%2Fcontas');
-  assert.equal(parseNativeCallback('jakash://auth/callback?code=abcdefgh12&next=https%3A%2F%2Fevil.com'), 'https://www.jakash.app/auth/callback?code=abcdefgh12&next=%2Fdashboard');
-  assert.equal(parseNativeCallback('jakash://auth/callback?code=abcdefgh12'), 'https://www.jakash.app/auth/callback?code=abcdefgh12&next=%2Fdashboard');
+  assert.equal(parseNativeCallback('jakash://auth/callback?code=abcdefgh12&next=%2Fcontas'), 'https://app.jakash.app/auth/callback?code=abcdefgh12&next=%2Fcontas');
+  assert.equal(parseNativeCallback('jakash://auth/callback?code=abcdefgh12&next=https%3A%2F%2Fevil.com'), 'https://app.jakash.app/auth/callback?code=abcdefgh12&next=%2Fdashboard');
+  assert.equal(parseNativeCallback('jakash://auth/callback?code=abcdefgh12'), 'https://app.jakash.app/auth/callback?code=abcdefgh12&next=%2Fdashboard');
   for (const bad of [
-    null, undefined, '', 'nao e url', 'https://www.jakash.app/auth/callback?code=abcdefgh12', 'jakash://outra/coisa?code=abcdefgh12',
+    null, undefined, '', 'nao e url', 'https://app.jakash.app/auth/callback?code=abcdefgh12', 'jakash://outra/coisa?code=abcdefgh12',
     'jakash://auth/outro?code=abcdefgh12', 'jakash://auth/callback', 'jakash://auth/callback?code=x', 'jakash://evil.com/callback?code=abcdefgh12',
   ]) assert.equal(parseNativeCallback(bad), null, String(bad));
 });

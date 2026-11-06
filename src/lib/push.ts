@@ -15,7 +15,7 @@ let ready = false;
 function init() {
   if (ready) return;
   webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT || 'https://www.jakash.app',
+    process.env.VAPID_SUBJECT || 'https://app.jakash.app',
     process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY as string,
     process.env.VAPID_PRIVATE_KEY as string,
   );

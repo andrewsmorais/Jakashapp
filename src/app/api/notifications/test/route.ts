@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 const lastSent = new Map<string, number>(); // proteção simples contra cliques repetidos (por instância)
 const COOLDOWN_MS = 30_000;
-const siteUrl = () => (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.jakash.app').replace(/\/$/, '');
+const siteUrl = () => (process.env.NEXT_PUBLIC_SITE_URL || 'https://app.jakash.app').replace(/\/$/, '');
 const fail = (error: string, status: number) => NextResponse.json({ error }, { status });
 
 export async function POST(req: Request) {

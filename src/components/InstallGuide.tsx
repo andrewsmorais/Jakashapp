@@ -63,7 +63,7 @@ const androidAddressBar = (highlightDots: boolean) => (
     <rect x="10" y="36" width="200" height="40" fill="#fff" />
     <rect x="16" y="42" width="116" height="28" rx="14" fill="#F1F3F4" />
     <g fill="none" stroke="#5F6368" strokeWidth="1.4"><rect x="25" y="53" width="7" height="6" rx="1.2" /><path d="M26.5 53v-1.8a2 2 0 0 1 4 0V53" /></g>
-    <text x="38" y="60" fontSize="10" fill="#202124">jakash.app</text>
+    <text x="38" y="60" fontSize="10" fill="#202124">app.jakash.app</text>
     <rect x="140" y="47" width="17" height="17" rx="4" fill="none" stroke="#5F6368" strokeWidth="1.5" /><text x="148.5" y="59.5" fontSize="9" fontWeight="700" fill="#5F6368" textAnchor="middle">1</text>
     <g fill="#5F6368"><circle cx="192" cy="49" r="1.9" /><circle cx="192" cy="56" r="1.9" /><circle cx="192" cy="63" r="1.9" /></g>
     {highlightDots && <><Ring x={178} y={41} w={28} h={30} r={14} /><Tap x={192} y={56} /></>}
@@ -100,7 +100,7 @@ function AndroidStep3() {
       <rect x="26" y="150" width="168" height="132" rx="20" fill="#fff" />
       <Logo x={40} y={166} s={34} />
       <text x="84" y="181" fontSize="11" fontWeight="800" fill="#202124">Instalar app?</text>
-      <text x="84" y="195" fontSize="8.5" fill="#5F6368">Jakash · jakash.app</text>
+      <text x="84" y="195" fontSize="8.5" fill="#5F6368">Jakash · app.jakash.app</text>
       <text x="40" y="228" fontSize="8.5" fill="#5F6368">Você poderá abrir o Jakash direto</text>
       <text x="40" y="240" fontSize="8.5" fill="#5F6368">da tela inicial do celular.</text>
       <text x="108" y="268" fontSize="10" fontWeight="700" fill="#7C3AED" textAnchor="end">Cancelar</text>
@@ -122,7 +122,7 @@ const iosBars = (hlShare: boolean) => (
   <g>
     <rect x="10" y="344" width="200" height="86" fill="#F2F2F7" />
     <rect x="22" y="350" width="176" height="30" rx="11" fill="#E5E5EA" />
-    <text x="110" y="369" fontSize="10.5" fill="#111827" textAnchor="middle">🔒 jakash.app</text>
+    <text x="110" y="369" fontSize="10.5" fill="#111827" textAnchor="middle">🔒 app.jakash.app</text>
     <g fill="none" stroke="#007AFF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M36 398l-6 6 6 6" /><path d="M72 398l6 6-6 6" /><path d="M150 396h9v13l-4.5-3.5L150 409z" /><rect x="178" y="397" width="12" height="12" rx="2.5" /></g>
     {SHARE(114, 406)}
@@ -137,7 +137,7 @@ function IosStep2() {
       <rect x="10" y="108" width="200" height="322" rx="16" fill="#F2F2F7" />
       <Logo x={22} y={122} s={30} />
       <text x="60" y="135" fontSize="10.5" fontWeight="700" fill="#111827">Jakash</text>
-      <text x="60" y="148" fontSize="8.5" fill="#6B7280">jakash.app</text>
+      <text x="60" y="148" fontSize="8.5" fill="#6B7280">app.jakash.app</text>
       <rect x="22" y="164" width="176" height="64" rx="10" fill="#fff" />
       {["AirDrop", "Mensagens", "Mail"].map((t, i) => <g key={t}><circle cx={48 + i * 56} cy="186" r="14" fill={["#DBEAFE", "#BBF7D0", "#BFDBFE"][i]} /><text x={48 + i * 56} y="216" fontSize="8" fill="#374151" textAnchor="middle">{t}</text></g>)}
       <rect x="22" y="240" width="176" height="124" rx="10" fill="#fff" />
@@ -166,7 +166,7 @@ function IosStep3() {
       <Logo x={32} y={118} s={44} />
       <text x="88" y="133" fontSize="10.5" fontWeight="700" fill="#111827">Jakash</text>
       <rect x="86" y="140" width="100" height="1" fill="#E5E7EB" />
-      <text x="88" y="158" fontSize="8.5" fill="#6B7280">https://www.jakash.app/</text>
+      <text x="88" y="158" fontSize="8.5" fill="#6B7280">https://app.jakash.app/</text>
       <text x="26" y="204" fontSize="8" fill="#6B7280">Um ícone será adicionado à sua</text><text x="26" y="215" fontSize="8" fill="#6B7280">tela de início.</text>
     </Phone>
   );
@@ -193,13 +193,13 @@ function Home({ kind }: { kind: "android" | "ios" }) {
 type Step = { title: string; text: string; art: React.ReactNode };
 
 const ANDROID: Step[] = [
-  { title: "Abra no Chrome", text: "Entre em jakash.app no Google Chrome e toque nos 3 pontinhos, no canto de cima à direita.", art: <AndroidStep1 /> },
+  { title: "Abra no Chrome", text: "Entre em app.jakash.app no Google Chrome e toque nos 3 pontinhos, no canto de cima à direita.", art: <AndroidStep1 /> },
   { title: "Instalar app", text: "No menu, toque em “Instalar app”. Em alguns celulares aparece “Adicionar à tela inicial”.", art: <AndroidStep2 /> },
   { title: "Confirme", text: "Toque em “Instalar” na janelinha que abrir.", art: <AndroidStep3 /> },
   { title: "Pronto!", text: "O ícone do Jakash fica na tela inicial. Abra por ele, em tela cheia, como qualquer app.", art: <AndroidStep4 /> },
 ];
 const IOS: Step[] = [
-  { title: "Abra no Safari", text: "Entre em jakash.app no Safari (no iPhone só funciona por ele) e toque em Compartilhar, o quadrado com a seta pra cima.", art: <IosStep1 /> },
+  { title: "Abra no Safari", text: "Entre em app.jakash.app no Safari (no iPhone só funciona por ele) e toque em Compartilhar, o quadrado com a seta pra cima.", art: <IosStep1 /> },
   { title: "Tela de Início", text: "Role a lista e toque em “Adicionar à Tela de Início”.", art: <IosStep2 /> },
   { title: "Adicionar", text: "Toque em “Adicionar”, no canto de cima à direita.", art: <IosStep3 /> },
   { title: "Pronto!", text: "O ícone do Jakash fica na tela inicial. Abra por ele, em tela cheia, como qualquer app.", art: <IosStep4 /> },

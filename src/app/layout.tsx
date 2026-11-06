@@ -11,8 +11,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://www.jakash.app"),
   title: "Jakash | Organize seu dinheiro com IA",
   description: "Organize seu dinheiro no dia a dia: lançamentos, contas a pagar, cartões, dívidas e objetivos, com assistente de IA dentro do app. 7 dias grátis, sem cartão.",
-  alternates: { canonical: "/" },
-  robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 } },
+  robots: { index: false, follow: false },
   openGraph: {
     title: "Jakash | Organize seu dinheiro com IA",
     description: "Organize seu dinheiro no dia a dia, com assistente de IA dentro do app. 7 dias grátis, sem cartão.",

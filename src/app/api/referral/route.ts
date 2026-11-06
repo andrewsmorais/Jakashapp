@@ -15,7 +15,7 @@ export async function GET() {
 
   const { data } = await admin.from('referrals').select('status').eq('referrer_id', user.id).limit(1000);
   const rows = data ?? [];
-  const site = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.jakash.app').replace(/\/$/, '');
+  const site = (process.env.NEXT_PUBLIC_SITE_URL || 'https://app.jakash.app').replace(/\/$/, '');
   return NextResponse.json({
     code,
     link: `${site}/?ref=${code}`,

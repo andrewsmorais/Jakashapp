@@ -33,7 +33,7 @@ type Prof = {
 };
 type Counts = Record<Channel, { sent: number; failed: number }>;
 
-const siteUrl = () => (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.jakash.app').replace(/\/$/, '');
+const siteUrl = () => (process.env.NEXT_PUBLIC_SITE_URL || 'https://app.jakash.app').replace(/\/$/, '');
 
 function authorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET;

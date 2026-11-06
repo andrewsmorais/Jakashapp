@@ -1,6 +1,6 @@
 # Codemagic: build do app iOS do Jakash (Capacitor 8 + Swift Package Manager) e envio ao TestFlight.
 #
-# O app é uma casca nativa que carrega o site (https://www.jakash.app). Por isso as variáveis NEXT_PUBLIC_* (como
+# O app é uma casca nativa que carrega o app (https://app.jakash.app). Por isso as variáveis NEXT_PUBLIC_* (como
 # NEXT_PUBLIC_IOS_IAP) e as chaves do servidor (APNS_*, APPLE_IAP_*) ficam na VERCEL, não aqui: o Codemagic só compila o app.
 # Passo a passo completo (contas, chaves, App Store Connect): docs/IOS-APP-STORE.md
 

@@ -210,7 +210,15 @@ export function ShiftForm({ supabase, userId, vehicles, editing, lastUsed, onSav
               <option value="">Escolha</option>
               {active.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
             </select></div>
-          <div><Label>Data *</Label><input type="date" className={inputCls + ring("data")} value={date} max={todayISO()} onChange={(e) => setDate(e.target.value)} /></div>
+          <div><Label>Data *</Label>
+            <div className="flex gap-1.5 mb-1.5">
+              {([["Hoje", 0], ["Ontem", 1]] as const).map(([l, back]) => {
+                const v = new Date(Date.now() - back * 86_400_000);
+                const val = `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, "0")}-${String(v.getDate()).padStart(2, "0")}`;
+                return <button key={l} type="button" onClick={() => setDate(val)} className={`rounded-full px-3 py-1 text-xs font-bold ${date === val ? "bg-brand-dark text-white dark:bg-brand-vivid" : "bg-gray-100 dark:bg-[#1E1E1E] text-gray-500"}`}>{l}</button>;
+              })}
+            </div>
+            <input type="date" className={inputCls + ring("data")} value={date} max={todayISO()} onChange={(e) => setDate(e.target.value)} /></div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div><Label>KM inicial *</Label><input className={inputCls + ring("KM inicial")} inputMode="decimal" value={kmStart} onChange={(e) => { setKmStart(e.target.value); setKmStartTouched(true); }} placeholder="Ex.: 45210" /></div>

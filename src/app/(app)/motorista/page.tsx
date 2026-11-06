@@ -12,18 +12,16 @@ import { TurnosPanel } from "@/components/driver/TurnosPanel";
 import { BackTitle, Card, Empty, ErrorNote, Label, btnCls, btnGhostCls, inputCls } from "@/components/ui/page";
 
 type Tab = "turnos" | "resultados" | "carros";
-type Preset = "hoje" | "ontem" | "7d" | "mes" | "mes_passado" | "30d" | "custom";
+type Preset = "hoje" | "semana" | "mes" | "custom";
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 function periodFor(p: Preset, custom: Period): Period {
   const today = todayISO();
   const [y, m, d] = today.split("-").map(Number);
   if (p === "hoje") return { from: today, to: today };
-  if (p === "ontem") { const y1 = iso(new Date(y, m - 1, d - 1)); return { from: y1, to: y1 }; }
-  if (p === "7d") return { from: iso(new Date(y, m - 1, d - 6)), to: today };
-  if (p === "30d") return { from: iso(new Date(y, m - 1, d - 29)), to: today };
+  // Semana: de segunda-feira até hoje.
+  if (p === "semana") { const dow = (new Date(y, m - 1, d).getDay() + 6) % 7; return { from: iso(new Date(y, m - 1, d - dow)), to: today }; }
   if (p === "mes") return { from: `${today.slice(0, 7)}-01`, to: today };
-  if (p === "mes_passado") return { from: iso(new Date(y, m - 2, 1)), to: iso(new Date(y, m - 1, 0)) };
   return custom.from <= custom.to ? custom : { from: custom.to, to: custom.from };
 }
 
@@ -149,7 +147,7 @@ export default function MotoristaPage() {
             <>
               <Card className="mb-4 !p-4 space-y-3">
                 <div className="flex gap-2 overflow-x-auto -mx-1 px-1">
-                  {([["hoje", "Hoje"], ["ontem", "Ontem"], ["7d", "7 dias"], ["mes", "Este mês"], ["mes_passado", "Mês passado"], ["30d", "30 dias"], ["custom", "Escolher datas"]] as const).map(([k, l]) => (
+                  {([["hoje", "Hoje"], ["semana", "Esta semana"], ["mes", "Este mês"], ["custom", "Escolher datas"]] as const).map(([k, l]) => (
                     <button key={k} type="button" onClick={() => setPreset(k)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ${preset === k ? "bg-brand-dark text-white dark:bg-brand-vivid" : "bg-white/70 dark:bg-[#1E1E1E] text-gray-500"}`}>{l}</button>
                   ))}
                 </div>

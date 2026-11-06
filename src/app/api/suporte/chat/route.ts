@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -9,8 +8,20 @@ import { SUPPORT_SYSTEM_PROMPT } from '@/lib/supportPrompt';
 
 export const maxDuration = 30;
 
-// Chave própria do chat de suporte (SUPPORT_OPENAI_API_KEY); sem ela, usa a mesma da Jaki.
-const apiKey = () => process.env.SUPPORT_OPENAI_API_KEY || process.env.OPENAI_API_KEY || '';
+// O chat de ajuda usa a API da Claude (Anthropic), com chave própria: SUPPORT_ANTHROPIC_API_KEY. Modelo: SUPPORT_CHAT_MODEL (padrão claude-haiku-5-5).
+const apiKey = () => process.env.SUPPORT_ANTHROPIC_API_KEY || '';
+
+type Turn = { role: 'user' | 'assistant'; content: string };
+// A API exige começar pelo usuário e alternar as vozes: tira o que vier fora de ordem.
+function alternate(history: Turn[], message: string): Turn[] {
+  const out: Turn[] = [];
+  for (const t of [...history, { role: 'user' as const, content: message }]) {
+    const last = out[out.length - 1];
+    if (!out.length && t.role !== 'user') continue;
+    if (last && last.role === t.role) last.content += `\n${t.content}`; else out.push({ ...t });
+  }
+  return out;
+}
 
 const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
 
@@ -47,14 +58,20 @@ export async function POST(request: Request) {
     if (used === -1) return NextResponse.json({ error: `Você usou as ${limit} mensagens de IA de hoje. Amanhã tem mais!` }, { status: 429 });
 
     try {
-      const openai = new OpenAI({ apiKey: apiKey() });
-      const completion = await openai.chat.completions.create({
-        model: process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini',
-        temperature: 0.2,
-        max_tokens: 600,
-        messages: [{ role: 'system', content: SUPPORT_SYSTEM_PROMPT }, ...history, { role: 'user', content: message }],
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-api-key': apiKey(), 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({
+          model: process.env.SUPPORT_CHAT_MODEL || 'claude-haiku-5-5',
+          max_tokens: 600,
+          system: SUPPORT_SYSTEM_PROMPT,
+          messages: alternate(history, message),
+        }),
+        signal: AbortSignal.timeout(25_000),
       });
-      const reply = completion.choices[0]?.message?.content?.trim();
+      if (!res.ok) throw new Error(`anthropic ${res.status}`);
+      const data = (await res.json()) as { content?: { type: string; text?: string }[] };
+      const reply = data.content?.filter((c) => c.type === 'text').map((c) => c.text ?? '').join('').trim();
       if (!reply) throw new Error('resposta vazia');
       return NextResponse.json({ reply });
     } catch (err) {

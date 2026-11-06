@@ -87,3 +87,53 @@ export function goalStatus(goal: number | null | undefined, spent: number): { le
   const left = r2(goal - spent);
   return { left, over: left < 0, pct: Math.min(100, Math.max(0, Math.round((spent / goal) * 100))) };
 }
+
+// ---------- Nota fiscal x lista ----------
+
+export type ReceiptItem = { name: string; quantity: number; total: number };
+
+const STOP = new Set(["de", "da", "do", "das", "dos", "com", "sem", "tipo", "para", "pct", "cx", "un", "kg", "gr", "ml", "lt", "pc", "e", "a", "o"]);
+
+/** Palavras que contam para comparar: sem acento, minúsculas, sem números nem palavras de ligação. */
+export function nameTokens(name: string): string[] {
+  return name
+    .normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+    .replace(/[^a-z\s]/g, " ").split(/\s+/)
+    .filter((t) => t.length >= 3 && !STOP.has(t));
+}
+
+// "feij" (nota abreviada) casa com "feijao"; exige pelo menos 4 letras em comum no começo.
+const sameWord = (a: string, b: string) => {
+  if (a === b) return true;
+  const [s, l] = a.length <= b.length ? [a, b] : [b, a];
+  return s.length >= 4 && l.startsWith(s);
+};
+
+function score(listName: string, receiptName: string): number {
+  const a = nameTokens(listName);
+  const b = nameTokens(receiptName);
+  return a.filter((x) => b.some((y) => sameWord(x, y))).length;
+}
+
+export type ReceiptRow = { item: ShopItem; match: ReceiptItem | null };
+
+/**
+ * Compara o que estava na lista (planejado e o que foi pego) com o que saiu no caixa.
+ * Cada produto da nota casa com no máximo um item da lista (o de mais palavras em comum). É só uma ajuda: a pessoa confere.
+ */
+export function compareReceipt(items: ShopItem[], receipt: ReceiptItem[]): { rows: ReceiptRow[]; unlisted: ReceiptItem[] } {
+  const pairs: { li: number; ri: number; s: number }[] = [];
+  items.forEach((it, li) => receipt.forEach((r, ri) => { const s = score(it.name, r.name); if (s > 0) pairs.push({ li, ri, s }); }));
+  pairs.sort((x, y) => y.s - x.s);
+  const usedL = new Set<number>();
+  const usedR = new Set<number>();
+  const match = new Map<number, number>();
+  for (const p of pairs) {
+    if (usedL.has(p.li) || usedR.has(p.ri)) continue;
+    usedL.add(p.li); usedR.add(p.ri); match.set(p.li, p.ri);
+  }
+  return {
+    rows: items.map((item, li) => ({ item, match: match.has(li) ? receipt[match.get(li)!] : null })),
+    unlisted: receipt.filter((_, ri) => !usedR.has(ri)),
+  };
+}

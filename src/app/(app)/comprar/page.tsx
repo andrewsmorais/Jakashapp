@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Check, CloudOff, Mic, ShoppingCart, Square, Trash2 } from "lucide-react";
+import { Camera, Check, CloudOff, LoaderCircle, Mic, ShoppingCart, Square, Trash2, X } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { useCards } from "@/lib/useCards";
 import { useUsageType } from "@/lib/useUsageType";
@@ -12,7 +12,8 @@ import { invoiceMonthFor } from "@/lib/cards";
 import { rootId, type CatRow } from "@/lib/categories";
 import { loadCategoryState, visibleCats } from "@/lib/categoryVisibility";
 import { detectVoiceMethod, startVoice, voiceErrorText, type VoiceMethod, type VoiceSession } from "@/lib/voiceInput";
-import { budgetLeft, goalStatus, listTotals, parseShoppingInput, quantityLabel, suggestNames, type ShopItem } from "@/lib/shopping";
+import { shrinkImage } from "@/lib/fileImport";
+import { budgetLeft, compareReceipt, goalStatus, itemTotal, listTotals, parseShoppingInput, quantityLabel, suggestNames, type ReceiptItem, type ShopItem } from "@/lib/shopping";
 import { BackTitle, Card, Empty, ErrorNote, Label, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
 
 type ListRow = { id: string; user_id: string; name: string; is_business: boolean; created_at: string };
@@ -47,6 +48,8 @@ export default function ComprarPage() {
   const [listening, setListening] = useState(false);
   const [heard, setHeard] = useState("");
   const voice = useRef<VoiceSession | null>(null);
+  const [receipt, setReceipt] = useState<{ store: string; date: string; total: string; items: ReceiptItem[] } | null>(null);
+  const [reading, setReading] = useState(false);
   useEffect(() => { setVoiceMethod(detectVoiceMethod()); return () => { voice.current?.cancel(); }; }, []);
 
   const ops = useRef(new Map<string, Op>());
@@ -229,14 +232,33 @@ export default function ComprarPage() {
   const [fin, setFin] = useState({ amount: "", description: "", category_id: "", pay: "", date: todayISO() });
   const creditCards = cards.filter((c) => c.kind === "credito" && !c.archived);
 
-  function openFinish() {
+  async function readReceipt(file: File | undefined) {
+    if (!file) return;
+    setError(null); setReading(true);
+    try {
+      const small = await shrinkImage(file);
+      const fd = new FormData();
+      fd.append("file", small);
+      const res = await fetch("/api/compras/nota", { method: "POST", body: fd });
+      const data = (await res.json().catch(() => ({}))) as { store?: string | null; date?: string | null; total?: number | null; items?: ReceiptItem[]; error?: string };
+      if (!res.ok) { setError(data.error ?? "Não consegui ler a nota agora."); return; }
+      if (!data.items || data.items.length === 0) { setError("Não encontrei produtos nesta foto. Tente de novo com a nota inteira, reta e bem iluminada."); return; }
+      setReceipt({ store: data.store ?? "", date: data.date ?? todayISO(), total: data.total != null ? String(data.total).replace(".", ",") : "", items: data.items });
+    } catch {
+      setError("Não consegui enviar a foto. Verifique o sinal e tente de novo.");
+    } finally {
+      setReading(false);
+    }
+  }
+
+  function openFinish(fromReceipt = false) {
     const food = cats.find((x) => !x.parent_id && /aliment/i.test(x.name));
     setFin({
-      amount: totals.cart > 0 ? String(totals.cart).replace(".", ",") : "",
-      description: list?.name ?? "Mercado",
+      amount: fromReceipt && receipt?.total ? receipt.total : totals.cart > 0 ? String(totals.cart).replace(".", ",") : "",
+      description: (fromReceipt && receipt?.store.trim()) || (list?.name ?? "Mercado"),
       category_id: food?.id ?? "",
       pay: accs[0] ? `acc:${accs[0].id}` : creditCards[0] ? `card:${creditCards[0].id}` : "",
-      date: todayISO(),
+      date: fromReceipt && receipt?.date && receipt.date <= todayISO() ? receipt.date : todayISO(),
     });
     setError(null);
     setFinishing(true);
@@ -374,6 +396,80 @@ export default function ComprarPage() {
         )}
       </Card>
 
+      <label className={`mt-4 flex items-center gap-3 rounded-2xl border-2 border-dashed border-brand-dark/30 dark:border-white/15 px-4 py-3 ${reading ? "opacity-60" : "cursor-pointer hover:bg-brand-dark/5 dark:hover:bg-[#1E1E1E]"}`}>
+        {reading ? <LoaderCircle size={20} className="animate-spin text-brand-dark dark:text-brand-soft shrink-0" /> : <Camera size={20} className="text-brand-dark dark:text-brand-soft shrink-0" />}
+        <span className="min-w-0">
+          <span className="block text-sm font-extrabold">{reading ? "Lendo a nota..." : "Já passou no caixa? Foto da nota fiscal"}</span>
+          <span className="block text-xs text-gray-500">Mostro o que foi comprado e comparo com a sua lista.</span>
+        </span>
+        <input type="file" accept="image/*" capture="environment" className="hidden" disabled={reading} onChange={(e) => { void readReceipt(e.target.files?.[0]); e.target.value = ""; }} />
+      </label>
+
+      {receipt && (() => {
+        const cmp = compareReceipt(items, receipt.items);
+        const rTotal = parseMoney(receipt.total || "0");
+        const finalTotal = Number.isNaN(rTotal) ? 0 : rTotal;
+        const diff = Math.round((finalTotal - totals.cart) * 100) / 100;
+        const goalFinal = goalStatus(goal, finalTotal);
+        return (
+          <Card className="mt-4 space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0"><h2 className="text-lg font-extrabold">Nota fiscal{receipt.store ? ` · ${receipt.store}` : ""}</h2><p className="text-xs text-gray-500">Confira: a leitura por foto pode errar um valor.</p></div>
+              <button onClick={() => setReceipt(null)} aria-label="Fechar a nota" className="text-gray-400"><X size={20} /></button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-2xl bg-gray-100 dark:bg-[#1E1E1E] p-2.5"><p className="text-[11px] font-bold text-gray-500">1. Planejado</p><p className="font-extrabold">{money(brl(totals.estimated))}</p>{goal != null && <p className="text-[10px] text-gray-500">meta {money(brl(goal))}</p>}</div>
+              <div className="rounded-2xl bg-blue-500/10 p-2.5"><p className="text-[11px] font-bold text-blue-600 dark:text-blue-400">2. Carrinho</p><p className="font-extrabold">{money(brl(totals.cart))}</p><p className="text-[10px] text-gray-500">{totals.checked}/{totals.total} itens</p></div>
+              <div className="rounded-2xl bg-emerald-500/10 p-2.5"><p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">3. No caixa</p><p className="font-extrabold">{money(brl(finalTotal))}</p><p className="text-[10px] text-gray-500">{receipt.items.length} produtos</p></div>
+            </div>
+            {totals.cart > 0 && <p className={`text-sm font-bold ${diff > 0 ? "text-red-600 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400"}`}>{diff === 0 ? "O caixa fechou igual ao seu carrinho." : diff > 0 ? `O caixa deu ${money(brl(diff))} a mais que o seu carrinho.` : `O caixa deu ${money(brl(-diff))} a menos que o seu carrinho.`}</p>}
+            {goalFinal && <p className={`text-sm font-bold ${goalFinal.over ? "text-red-600 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400"}`}>{goalFinal.over ? `Passou ${money(brl(-goalFinal.left))} da meta de ${money(brl(goal ?? 0))}.` : `Ficou ${money(brl(goalFinal.left))} abaixo da meta de ${money(brl(goal ?? 0))}.`}</p>}
+
+            <div>
+              <p className="text-xs font-bold text-gray-500 mb-1">4. Sua lista × a nota</p>
+              <ul className="divide-y divide-gray-100 dark:divide-white/5">
+                {cmp.rows.map(({ item, match }) => {
+                  const mine = itemTotal(item);
+                  return (
+                    <li key={item.id} className="flex items-center gap-2 py-2 text-sm">
+                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${match ? "bg-emerald-500" : "bg-red-500"}`} />
+                      <span className="min-w-0 flex-1 truncate font-bold">{item.name}{item.extra && <span className="ml-2 text-[10px] font-bold text-amber-700 dark:text-amber-300">fora da lista</span>}</span>
+                      {match ? (
+                        <span className="shrink-0 text-right text-xs">
+                          <span className="block font-bold">{money(brl(match.total))}</span>
+                          {mine > 0 && Math.abs(match.total - mine) >= 0.01 && <span className={`block ${match.total > mine ? "text-red-600 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400"}`}>você anotou {money(brl(mine))}</span>}
+                        </span>
+                      ) : <span className="shrink-0 text-xs text-red-600 dark:text-red-400 font-bold">não veio na nota</span>}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+
+            {cmp.unlisted.length > 0 && (
+              <div>
+                <p className="text-xs font-bold text-gray-500 mb-1">Saiu no caixa e não estava na sua lista</p>
+                <ul className="divide-y divide-gray-100 dark:divide-white/5">
+                  {cmp.unlisted.map((r, k) => (
+                    <li key={`${r.name}-${k}`} className="flex items-center gap-2 py-2 text-sm">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-amber-500" />
+                      <span className="min-w-0 flex-1 truncate">{r.name}</span>
+                      <span className="shrink-0 font-bold text-xs">{money(brl(r.total))}</span>
+                      <button aria-label={`Tirar ${r.name} da nota`} onClick={() => setReceipt({ ...receipt, items: receipt.items.filter((x) => x !== r) })} className="text-gray-400 hover:text-red-500"><X size={15} /></button>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-[11px] text-gray-500 mt-1">Leu errado? Toque no X para tirar da comparação.</p>
+              </div>
+            )}
+
+            <div><Label>Total da nota</Label><input className={inputCls} inputMode="decimal" value={receipt.total} onChange={(e) => setReceipt({ ...receipt, total: e.target.value })} /></div>
+            <button onClick={() => openFinish(true)} className={btnCls + " w-full"}><ShoppingCart size={18} /> Lançar como despesa</button>
+          </Card>
+        );
+      })()}
+
       {items.length > 0 && (
         <div className="sticky bottom-20 md:bottom-4 mt-4 rounded-[28px] border border-white/80 dark:border-white/5 bg-white/90 dark:bg-[#161616] backdrop-blur-xl shadow-lg p-4">
           <div className="grid grid-cols-2 gap-3 mb-3">
@@ -388,7 +484,7 @@ export default function ComprarPage() {
               </p>
             </div>
           )}
-          <button onClick={openFinish} className={btnCls + " w-full"}><ShoppingCart size={18} /> Finalizar compra</button>
+          <button onClick={() => openFinish()} className={btnCls + " w-full"}><ShoppingCart size={18} /> Finalizar compra</button>
         </div>
       )}
 

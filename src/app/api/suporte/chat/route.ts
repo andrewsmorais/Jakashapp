@@ -23,6 +23,10 @@ function alternate(history: Turn[], message: string): Turn[] {
   return out;
 }
 
+// Marca que o modelo coloca no fim da resposta quando não consegue ajudar ou a pessoa precisa de atendente: o servidor tira e avisa a tela.
+const HANDOFF_TAG = '[[ATENDENTE]]';
+const WANTS_HUMAN = /atendente|atendimento humano|\bhumano\b|pessoa de verdade|falar com (algu[eé]m|a equipe|voc[eê]s|o suporte)|suporte humano|whats ?app|zap/i;
+
 const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
 
 const bodySchema = z.object({
@@ -73,7 +77,8 @@ export async function POST(request: Request) {
       const data = (await res.json()) as { content?: { type: string; text?: string }[] };
       const reply = data.content?.filter((c) => c.type === 'text').map((c) => c.text ?? '').join('').trim();
       if (!reply) throw new Error('resposta vazia');
-      return NextResponse.json({ reply });
+      const handoff = reply.includes(HANDOFF_TAG) || WANTS_HUMAN.test(message);
+      return NextResponse.json({ reply: reply.replaceAll(HANDOFF_TAG, '').trim(), handoff });
     } catch (err) {
       console.error('[suporte] falha ao chamar a IA', err);
       await admin.rpc('ai_usage_refund', { p_user: user.id, p_day: day });

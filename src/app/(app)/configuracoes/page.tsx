@@ -17,7 +17,7 @@ const ITEMS: { icon: LucideIcon; title: string; desc: string; href?: string; soo
   { icon: Palette, title: "Aparência", desc: "Tema claro/escuro e cor do app.", href: "/configuracoes/aparencia" },
   { icon: Sparkles, title: "Planos e assinatura", desc: "Seu plano, faturas e cancelamento.", href: "/configuracoes/planos" },
   { icon: Database, title: "Dados", desc: "Exportar, recomeçar do zero ou excluir a conta.", href: "/configuracoes/dados" },
-  { icon: MessageCircle, title: "Fale conosco", desc: "Suporte por WhatsApp, e-mail e chat de ajuda.", href: "/configuracoes/fale-conosco" },
+  { icon: MessageCircle, title: "Fale conosco", desc: "Chat de ajuda e contato com a equipe.", href: "/configuracoes/fale-conosco" },
 ];
 
 export default function ConfiguracoesPage() {

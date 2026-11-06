@@ -44,14 +44,13 @@ export function MaintenancePanel({ supabase, userId, vehicles, items, vehicleId,
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!form.vehicle_id) { setError("Escolha o veículo."); return; }
-    if (!form.part.trim()) { setError("Escreva a peça ou o serviço (ex.: troca de pneu)."); return; }
     if ([partV, laborV].some((n) => Number.isNaN(n) || n < 0)) { setError("Confira os valores."); return; }
     if (!(partV + laborV > 0)) { setError("Informe o valor da peça ou da mão de obra."); return; }
     const kmV = form.km.trim() ? parseMoney(form.km) : null;
     if (kmV !== null && (Number.isNaN(kmV) || kmV < 0)) { setError("Confira o km do veículo."); return; }
     if (form.date > todayISO()) { setError("A data não pode ser no futuro."); return; }
     setBusy(true);
-    const payload = { date: form.date, vehicle_id: form.vehicle_id, shop: form.shop.trim().slice(0, 80) || null, part: form.part.trim().slice(0, 120), part_cost: partV, labor_cost: laborV, bought_at: form.bought_at.trim().slice(0, 80) || null, km: kmV };
+    const payload = { date: form.date, vehicle_id: form.vehicle_id, shop: form.shop.trim().slice(0, 80) || null, part: form.part.trim() || "Manutenção", part_cost: partV, labor_cost: laborV, bought_at: form.bought_at.trim().slice(0, 80) || null, km: kmV };
     const res = editing === "new" ? await db.from("driver_maintenance").insert({ ...payload, user_id: userId }) : await db.from("driver_maintenance").update(payload).eq("id", editing as string);
     setBusy(false);
     if (res.error) { setError("Não foi possível salvar o gasto."); return; }
@@ -59,7 +58,7 @@ export function MaintenancePanel({ supabase, userId, vehicles, items, vehicleId,
   }
 
   async function remove(m: Maintenance) {
-    if (!window.confirm(`Excluir "${m.part}" de ${formatDateBR(m.date)}?${m.tx_id ? " O lançamento que você mandou para o financeiro continua lá." : ""}`)) return;
+    if (!window.confirm(`Excluir a manutenção de ${formatDateBR(m.date)}?${m.tx_id ? " O lançamento que você mandou para o financeiro continua lá." : ""}`)) return;
     const res = await db.from("driver_maintenance").delete().eq("id", m.id);
     if (res.error) setError("Não foi possível excluir."); else onChanged();
   }
@@ -69,7 +68,7 @@ export function MaintenancePanel({ supabase, userId, vehicles, items, vehicleId,
     setError(null);
     const cat = await db.from("categories").select("id").eq("is_default", true).is("user_id", null).ilike("name", "Manutenção do veículo").limit(1).maybeSingle();
     const tx = await db.from("transactions").insert({
-      user_id: userId, description: `Mecânica: ${m.part}${m.shop ? ` (${m.shop})` : ""}`.slice(0, 120), amount: maintenanceCost(m), type: "expense", date: m.date,
+      user_id: userId, description: `Mecânica${m.shop ? `: ${m.shop}` : ""}`.slice(0, 120), amount: maintenanceCost(m), type: "expense", date: m.date,
       category_id: (cat.data as { id: string } | null)?.id ?? null, origin: "manual", is_business: false,
     }).select("id").single();
     if (tx.error || !tx.data) { setError("Não foi possível lançar no financeiro."); return; }
@@ -113,7 +112,6 @@ export function MaintenancePanel({ supabase, userId, vehicles, items, vehicleId,
               </div>
               <input type="date" className={inputCls} value={form.date} max={todayISO()} onChange={(e) => setForm({ ...form, date: e.target.value })} />
             </div>
-            <div><Label>Peça trocada ou serviço *</Label><input className={inputCls} value={form.part} onChange={(e) => setForm({ ...form, part: e.target.value })} placeholder="Ex.: pneu dianteiro, pastilha de freio" maxLength={120} /></div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Preço da peça (R$)</Label><input className={inputCls} inputMode="decimal" value={form.part_cost} onChange={(e) => setForm({ ...form, part_cost: e.target.value })} placeholder="0,00" /></div>
               <div><Label>Mão de obra (opcional)</Label><input className={inputCls} inputMode="decimal" value={form.labor_cost} onChange={(e) => setForm({ ...form, labor_cost: e.target.value })} placeholder="0,00" /></div>
@@ -140,9 +138,9 @@ export function MaintenancePanel({ supabase, userId, vehicles, items, vehicleId,
               <div className="flex items-start gap-3">
                 <span className="w-10 h-10 rounded-2xl bg-red-500/10 inline-flex items-center justify-center text-red-600 shrink-0"><Wrench size={18} /></span>
                 <div className="flex-1 min-w-0">
-                  <p className="font-extrabold truncate">{m.part}</p>
-                  <p className="text-xs text-gray-500">{formatDateBR(m.date)} · {vName(m.vehicle_id)}{m.shop ? ` · ${m.shop}` : ""}</p>
-                  <p className="text-xs text-gray-500">Peça {brl(m.part_cost)}{m.labor_cost > 0 ? ` · mão de obra ${brl(m.labor_cost)}` : ""}</p>
+                  <p className="font-extrabold truncate">{m.shop ?? "Manutenção"}</p>
+                  <p className="text-xs text-gray-500">{formatDateBR(m.date)} · {vName(m.vehicle_id)}</p>
+                  <p className="text-xs text-gray-500">{m.part && m.part !== "Manutenção" ? `${m.part} · ` : ""}Peça {brl(m.part_cost)}{m.labor_cost > 0 ? ` · mão de obra ${brl(m.labor_cost)}` : ""}</p>
                   {(m.bought_at || m.km != null) && <p className="text-xs text-gray-500">{m.bought_at ? `Comprada em ${m.bought_at}` : ""}{m.bought_at && m.km != null ? " · " : ""}{m.km != null ? `${m.km.toLocaleString("pt-BR")} km` : ""}</p>}
                 </div>
                 <div className="text-right shrink-0">

@@ -47,7 +47,7 @@ export const PLAN_FEATURES: string[] = [
   'Lançamentos por texto, voz, foto e importação de extrato',
   'Cartões, contas a pagar e lançamentos que se repetem',
   'Supermercado: lista, carrinho, nota fiscal e comparação',
-  'Motorista de app: turnos, mecânica e lucro por hora e por km',
+  'Motorista: turnos, mecânica e lucro por hora e por km',
   'Limites, objetivos, dívidas e reserva de emergência',
   'Investimentos, planejamento do mês e simuladores',
   'Chat da Jaki, a assistente de IA',

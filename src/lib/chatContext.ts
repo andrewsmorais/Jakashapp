@@ -106,7 +106,7 @@ export async function buildChatContext(db: SupabaseClient, today: string, who?: 
   const isMei = false as boolean; // app só pessoal desde 06/11/2026: a Jaki não recebe dados de MEI
   const mei = isMei && prof ? await meiContext(db, today, prof) : null;
 
-  // Motorista de app: turnos do mês (só aparece para quem registrou turno).
+  // Motorista: turnos do mês (só aparece para quem registrou turno).
   const shifts = ds.error ? [] : ((ds.data ?? []) as Record<string, unknown>[]).map(normalizeShift);
   const drv = shifts.length ? summarize(shifts) : null;
   const mech = dm.error ? 0 : maintenanceTotal(((dm.data ?? []) as Record<string, unknown>[]).map(normalizeMaintenance));

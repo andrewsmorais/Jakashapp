@@ -1,4 +1,4 @@
-// Exportação do Motorista de app: planilha (CSV para Excel/Google Planilhas) com o resumo no topo
+// Exportação do Motorista: planilha (CSV para Excel/Google Planilhas) com o resumo no topo
 // (ganho bruto, despesas e lucro líquido em destaque) e um dia por linha.
 import { platformOf } from "@/lib/driverPlatforms";
 import { hoursLabel, shiftMetrics, summarize, type Shift, type Summary, type Vehicle } from "@/lib/driver";
@@ -21,7 +21,7 @@ export function driverCsv(shifts: Shift[], vehicles: Vehicle[], opts: DriverExpo
   const vName = new Map(vehicles.map((v) => [v.id, v.name]));
   const t = summary.total;
   const out: string[] = [];
-  out.push(line(["Jakash · Motorista de app"]));
+  out.push(line(["Jakash · Motorista"]));
   out.push(line(["Período", `${dateBR(opts.from)} a ${dateBR(opts.to)}`]));
   out.push(line(["Plataforma", opts.platform ? platformOf(opts.platform).name : "Todas"]));
   if (opts.vehicleName) out.push(line(["Carro", opts.vehicleName]));

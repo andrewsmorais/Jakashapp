@@ -113,11 +113,11 @@ export default function MotoristaPage() {
   function openEdit(s: Shift) { setEditing(s); setSaved(null); setFormOpen(true); setTab("turnos"); }
   function addVehicle() { setNewVehicle((n) => n + 1); setFormOpen(false); setTab("carros"); }
 
-  if (loading) return <div className="max-w-3xl mx-auto"><BackTitle title="Motorista de app" /><Empty>Carregando…</Empty></div>;
+  if (loading) return <div className="max-w-3xl mx-auto"><BackTitle title="Motorista" /><Empty>Carregando…</Empty></div>;
 
   return (
     <div className="max-w-3xl mx-auto pb-24">
-      <BackTitle title="Motorista de app" subtitle="Registre cada turno e os gastos com mecânica: veja quanto ganhou, gastou e lucrou." />
+      <BackTitle title="Motorista" subtitle="Registre cada turno e os gastos com mecânica: veja quanto ganhou, gastou e lucrou." />
 
       {setupNeeded ? <Card><Empty>Esta área fica disponível depois da próxima atualização do app.</Empty></Card> : (
         <>

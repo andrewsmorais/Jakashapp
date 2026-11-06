@@ -1,4 +1,4 @@
-// Motorista de app: contas do dia (horas, combustível, custo do carro, ganho por hora e por km) e resumo por período/plataforma.
+// Motorista: contas do dia (horas, combustível, custo do carro, ganho por hora e por km) e resumo por período/plataforma.
 // Tudo calculado no aparelho, sem serviço externo.
 
 export const FUELS = {

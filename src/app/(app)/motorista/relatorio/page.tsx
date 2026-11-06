@@ -13,7 +13,7 @@ const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const perH = (v: number | null) => (v === null ? "—" : `${brl(v)}/h`);
 const perKm = (v: number | null) => (v === null ? "—" : `${brl(v)}/km`);
 
-// Relatório do Motorista de app, pronto para imprimir ou salvar em PDF. Ganho bruto, despesas e lucro líquido em destaque.
+// Relatório do Motorista, pronto para imprimir ou salvar em PDF. Ganho bruto, despesas e lucro líquido em destaque.
 function Report() {
   const q = useSearchParams();
   const { supabase, userId, ready } = useSupabase();
@@ -55,7 +55,7 @@ function Report() {
       </div>
       {state === "loading" ? <Empty>Carregando…</Empty> : state === "error" ? <Empty>Não foi possível carregar o relatório.</Empty> : (
         <article className="bg-white text-black rounded-2xl p-6 md:p-8 shadow-sm print:shadow-none print:rounded-none print:p-0 text-sm">
-          <h1 className="text-xl font-extrabold">Relatório de ganhos · Motorista de app</h1>
+          <h1 className="text-xl font-extrabold">Relatório de ganhos · Motorista</h1>
           <p className="text-gray-600">{name ? `${name} · ` : ""}{formatDateBR(from)} a {formatDateBR(to)} · {platform ? platformOf(platform).name : "Todas as plataformas"}{carro && vName.get(carro) ? ` · ${vName.get(carro)}` : ""}</p>
 
           <div className="grid grid-cols-3 gap-3 mt-5">

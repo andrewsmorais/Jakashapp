@@ -1,4 +1,4 @@
-// Testes offline do Motorista de app: horas, combustível, ganho por hora/km, divisão por plataforma e exportação.
+// Testes offline do Motorista: horas, combustível, ganho por hora/km, divisão por plataforma e exportação.
 // Rodar: npm run test:driver
 import assert from "node:assert/strict";
 import { withMaintenance, maintenanceTotal, flexAdvice, fuelCost, normalizeVehicle, vehicleFuelFor, normalizeShift, platformShare, shiftMetrics, summarize, workedHours, turnoSummary, turnoMissing, kmOf, type Shift } from "../src/lib/driver";

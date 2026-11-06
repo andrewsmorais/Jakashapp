@@ -300,7 +300,7 @@ ok('quem tem acesso: teste no prazo; ativa até 3 dias depois do fim; sem plano,
 });
 ok('lista do que a assinatura inclui', () => {
   const text = PLAN_FEATURES.join(' | ');
-  for (const must of ['voz', 'extrato', 'Cartões', 'Supermercado', 'Motorista de app', 'Chat da Jaki', 'até 3 pessoas']) assert.ok(text.includes(must), `sem "${must}"`);
+  for (const must of ['voz', 'extrato', 'Cartões', 'Supermercado', 'Motorista', 'Chat da Jaki', 'até 3 pessoas']) assert.ok(text.includes(must), `sem "${must}"`);
   assert.ok(!/Essencial|Família|Pessoal|Empresarial/.test(text));
 });
 

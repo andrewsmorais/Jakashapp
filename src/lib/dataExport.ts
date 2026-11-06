@@ -57,7 +57,7 @@ export const EXPORT_ITEMS: ExportItem[] = [
   { id: "investments", label: "Investimentos e movimentações", hint: "Carteira, aportes, resgates e valores." },
   { id: "categories", label: "Categorias e subcategorias", hint: "As do Jakash e as suas." },
   { id: "shopping", label: "Listas de compras e itens", hint: "Listas, itens e preços estimados." },
-  { id: "driver", label: "Motorista de app", hint: "Cada dia trabalhado com ganho bruto, despesas e lucro líquido, e os seus carros." },
+  { id: "driver", label: "Motorista", hint: "Cada dia trabalhado com ganho bruto, despesas e lucro líquido, e os seus carros." },
   { id: "mei", label: "MEI: clientes, fornecedores, recibos e produtos", hint: "Clientes, fornecedores, recibos emitidos e o catálogo de produtos e serviços.", meiOnly: true },
   { id: "profile", label: "Perfil", hint: "Só dados do seu cadastro. Sem senhas, cobrança ou chaves." },
 ];
@@ -530,7 +530,7 @@ export const DATASETS: DatasetDef[] = [
     columns: [PESSOA, c("lista", "Lista"), c("item", "Item"), c("quantidade", "Quantidade", "number"), c("unidade", "Unidade"), c("preco_estimado", "Preço estimado", "money"), c("comprado", "Comprado", "bool"), c("comprado_em", "Comprado em", "date")],
   },
   {
-    id: "driver_shifts", item: "driver", file: "motorista-dias.csv", jsonKey: "motorista_dias", title: "Motorista de app: dias",
+    id: "driver_shifts", item: "driver", file: "motorista-dias.csv", jsonKey: "motorista_dias", title: "Motorista: dias",
     description: "Um dia trabalhado por linha, com ganho bruto, despesas e lucro líquido.",
     tasks: ["driver_shifts", "driver_vehicles"],
     columns: [c("data", "Data", "date"), c("carro", "Carro"), c("inicio", "Início"), c("fim", "Fim"), c("horas", "Horas", "number"), c("km", "Km", "number"),
@@ -539,7 +539,7 @@ export const DATASETS: DatasetDef[] = [
       c("lucro_por_hora", "Lucro por hora", "money"), c("lucro_por_km", "Lucro por km", "money"), c("observacoes", "Observações")],
   },
   {
-    id: "driver_vehicles", item: "driver", file: "motorista-carros.csv", jsonKey: "motorista_carros", title: "Motorista de app: carros",
+    id: "driver_vehicles", item: "driver", file: "motorista-carros.csv", jsonKey: "motorista_carros", title: "Motorista: carros",
     description: "Seus carros, com combustível, média e custos.",
     tasks: ["driver_vehicles"],
     columns: [c("nome", "Carro"), c("combustivel", "Combustível"), c("media", "Média (km por litro/m³/kWh; no flex, gasolina)", "number"), c("preco_combustivel", "Preço do combustível (no flex, gasolina)", "money"),

@@ -65,7 +65,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     title: "TRABALHO",
-    items: [{ icon: Car, label: "Motorista de app", href: "/motorista", match: ["/motorista"] }],
+    items: [{ icon: Car, label: "Motorista", href: "/motorista", match: ["/motorista"] }],
   },
 ];
 

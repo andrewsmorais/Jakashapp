@@ -14,7 +14,7 @@ export const CHAT_PAGES = {
   contas_a_pagar: { path: '/contas', label: 'Contas a pagar e receber' },
   dividas: { path: '/dividas', label: 'Dívidas' },
   comprar: { path: '/comprar', label: 'Supermercado' },
-  motorista: { path: '/motorista', label: 'Motorista de app' },
+  motorista: { path: '/motorista', label: 'Motorista' },
   categorias: { path: '/categorias', label: 'Categorias' },
   planos: { path: '/configuracoes/planos', label: 'Planos e assinatura' },
   objetivos: { path: '/metas', label: 'Objetivos' },

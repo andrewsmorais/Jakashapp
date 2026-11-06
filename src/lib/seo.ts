@@ -16,7 +16,7 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Quais são os planos e os preços do Jakash?",
-    a: `Um plano só, com duas formas de pagar, as duas com ${TRIAL_DAYS} dias grátis: ${PLANS.mensal.short} por ${planPrice("mensal")}/mês ou ${PLANS.anual.short} por ${planPrice("anual")}/ano (sai ${annualSavingsPct()}% mais barato). Inclui tudo: lançamentos, cartões, contas a pagar, supermercado, Motorista de app, limites, objetivos, dívidas, investimentos, Chat da Jaki e dividir com até ${PLANS.mensal.members} pessoas. A assinatura é feita no app do iPhone, pela App Store.`,
+    a: `Um plano só, com duas formas de pagar, as duas com ${TRIAL_DAYS} dias grátis: ${PLANS.mensal.short} por ${planPrice("mensal")}/mês ou ${PLANS.anual.short} por ${planPrice("anual")}/ano (sai ${annualSavingsPct()}% mais barato). Inclui tudo: lançamentos, cartões, contas a pagar, supermercado, Motorista, limites, objetivos, dívidas, investimentos, Chat da Jaki e dividir com até ${PLANS.mensal.members} pessoas. A assinatura é feita no app do iPhone, pela App Store.`,
   },
   {
     q: "O Jakash é gratuito?",

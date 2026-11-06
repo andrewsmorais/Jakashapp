@@ -1,12 +1,23 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { cardUsed, dueDateFor, invoiceMonthFor, type InvoiceRow } from '@/lib/cards';
 import { limitForYear, limitStatus, planLimit, profitSummary, toSummary } from '@/lib/mei';
-import { MAINT_COLUMNS, SHIFT_COLUMNS, maintenanceTotal, normalizeMaintenance, normalizeShift, summarize, withMaintenance } from '@/lib/driver';
+import { MAINT_COLUMNS, SHIFT_COLUMNS, VEHICLE_COLUMNS, VEHICLE_KINDS, maintenanceCost, maintenanceTotal, normalizeMaintenance, normalizeShift, normalizeVehicle, plateLabel, shiftMetrics, summarize, withMaintenance } from '@/lib/driver';
 import { listTotals, type ShopItem } from '@/lib/shopping';
 import { coreOnlyFor, hiddenIds, type CatFull, type VisibilityRow } from '@/lib/categoryVisibility';
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const pad = (n: number) => String(n).padStart(2, '0');
+
+function monthsAgoStart(today: string, n: number): string {
+  const [y, m] = today.split('-').map(Number);
+  const d = new Date(Date.UTC(y, m - 1 - n, 1));
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-01`;
+}
+function daysAgo(today: string, n: number): string {
+  const [y, m, dd] = today.split('-').map(Number);
+  const d = new Date(Date.UTC(y, m - 1, dd - n));
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+}
 
 function bounds(today: string) {
   const [y, m] = today.split('-').map(Number);
@@ -28,7 +39,8 @@ type Tx = { description: string; amount: number | string; type: 'income' | 'expe
 // `who` (opcional): para a Jaki só sugerir as categorias que a pessoa deixou à mostra em Categorias.
 export async function buildChatContext(db: SupabaseClient, today: string, who?: { userId: string; createdAt?: string | null }) {
   const { start, end, prevStart, in30 } = bounds(today);
-  const [c, t, a, b, bd, g, d, k, s, iv, pf, vis, ds, sl, dm] = await Promise.all([
+  const twelveAgo = monthsAgoStart(today, 11);
+  const [c, t, a, b, bd, g, d, k, s, iv, pf, vis, ds, sl, dm, hx, dv, dmAll, dsAll, sla] = await Promise.all([
     db.from('categories').select('id,name,type,parent_id,is_default,user_id'),
     db.from('transactions').select('description,amount,type,date,category_id').gte('date', prevStart).lt('date', end).order('date', { ascending: false }).limit(1500),
     db.rpc('account_balances'),
@@ -44,6 +56,12 @@ export async function buildChatContext(db: SupabaseClient, today: string, who?: 
     db.from('driver_shifts').select(SHIFT_COLUMNS).gte('date', start).lt('date', end).limit(400),
     db.from('shopping_lists').select('id,name,budget').eq('status', 'open').eq('is_business', false).order('created_at').limit(1),
     db.from('driver_maintenance').select(MAINT_COLUMNS).gte('date', start).lt('date', end).limit(400),
+    // Para consultar qualquer menu sem abrir o relatório: histórico de 12 meses, veículos, toda a mecânica, turnos de 120 dias e as listas de supermercado recentes.
+    db.from('transactions').select('amount,type,date,category_id').gte('date', twelveAgo).lt('date', end).limit(6000),
+    db.from('driver_vehicles').select(VEHICLE_COLUMNS).order('created_at'),
+    db.from('driver_maintenance').select(MAINT_COLUMNS).order('date', { ascending: false }).limit(150),
+    db.from('driver_shifts').select(SHIFT_COLUMNS).gte('date', daysAgo(today, 120)).order('date', { ascending: false }).limit(300),
+    db.from('shopping_lists').select('id,name,status,list_date,budget,transaction_id').eq('is_business', false).order('list_date', { ascending: false }).limit(20),
   ]);
 
   const cats = (c.data ?? []) as Cat[];
@@ -135,6 +153,64 @@ export async function buildChatContext(db: SupabaseClient, today: string, who?: 
     }
   }
 
+  // Histórico mensal (12 meses): receitas, despesas e as maiores categorias de cada mês.
+  const hist = new Map<string, { receitas: number; despesas: number; cats: Record<string, number> }>();
+  for (const x of (hx.error ? [] : (hx.data ?? [])) as { amount: number | string; type: 'income' | 'expense'; date: string; category_id: string | null }[]) {
+    const key = x.date.slice(0, 7);
+    const h = hist.get(key) ?? { receitas: 0, despesas: 0, cats: {} };
+    const v = Number(x.amount);
+    if (x.type === 'income') h.receitas += v; else { h.despesas += v; const n = rootName(x.category_id); h.cats[n] = (h.cats[n] ?? 0) + v; }
+    hist.set(key, h);
+  }
+  const historico = Array.from(hist.entries()).sort((p, q) => q[0].localeCompare(p[0])).map(([mes, h]) => ({
+    mes, receitas: r2(h.receitas), despesas: r2(h.despesas),
+    maiores_categorias_de_despesa: Object.entries(h.cats).sort((p, q) => q[1] - p[1]).slice(0, 5).map(([nome, total]) => ({ nome, total: r2(total) })),
+  }));
+
+  // Veículos, mecânica e turnos (motorista), com o nome do veículo para a pessoa poder perguntar por ele.
+  const vehicles = dv.error ? [] : ((dv.data ?? []) as Record<string, unknown>[]).map(normalizeVehicle);
+  const vName = (id: string | null) => { const v = vehicles.find((x) => x.id === id); return v ? v.name : 'Veículo removido'; };
+  const maintAll = dmAll.error ? [] : ((dmAll.data ?? []) as Record<string, unknown>[]).map(normalizeMaintenance);
+  const shiftsAll = dsAll.error ? [] : ((dsAll.data ?? []) as Record<string, unknown>[]).map(normalizeShift);
+  const garagem = vehicles.length ? {
+    veiculos: vehicles.filter((v) => !v.archived).map((v) => ({ nome: v.name, tipo: VEHICLE_KINDS[v.kind], placa: v.plate ? plateLabel(v.plate) : null })),
+    manutencoes_registradas: maintAll.map((m) => ({
+      veiculo: vName(m.vehicle_id), data: m.date, mecanica: m.shop, valor_da_peca: m.part_cost, mao_de_obra: m.labor_cost, total: maintenanceCost(m),
+      onde_a_peca_foi_comprada: m.bought_at, km_do_veiculo: m.km, ...(m.part && m.part !== 'Manutenção' ? { peca: m.part } : {}),
+    })),
+    turnos_dos_ultimos_120_dias: shiftsAll.map((sh) => { const m = shiftMetrics(sh); return { data: sh.date, veiculo: vName(sh.vehicle_id), lucro_bruto: m.gross, despesas: m.expenses, lucro_liquido: m.net, km: m.km }; }),
+  } : null;
+
+  // Supermercado: as últimas listas (nome, data, meta, gasto e o que foi pego ou faltou).
+  const lists = sla.error ? [] : ((sla.data ?? []) as { id: string; name: string; status: string; list_date: string; budget: number | string | null; transaction_id: string | null }[]);
+  let listas_de_supermercado: unknown[] | null = null;
+  if (lists.length) {
+    const ids = lists.map((l) => l.id);
+    const txIds = lists.map((l) => l.transaction_id).filter((x): x is string => Boolean(x));
+    const [li, lt] = await Promise.all([
+      db.from('shopping_items').select('list_id,name,quantity,est_price,checked').in('list_id', ids).limit(800),
+      txIds.length ? db.from('transactions').select('id,amount').in('id', txIds) : Promise.resolve({ data: [], error: null }),
+    ]);
+    const paid = new Map(((lt.data ?? []) as { id: string; amount: number | string }[]).map((x) => [x.id, Number(x.amount)]));
+    const itemsBy = new Map<string, { name: string; quantity: number; est_price: number | null; checked: boolean }[]>();
+    for (const x of (li.error ? [] : (li.data ?? [])) as { list_id: string; name: string; quantity: number | string; est_price: number | string | null; checked: boolean }[]) {
+      const arr = itemsBy.get(x.list_id) ?? [];
+      arr.push({ name: x.name, quantity: Number(x.quantity), est_price: x.est_price == null ? null : Number(x.est_price), checked: x.checked });
+      itemsBy.set(x.list_id, arr);
+    }
+    listas_de_supermercado = lists.map((l) => {
+      const its = itemsBy.get(l.id) ?? [];
+      const cart = r2(its.filter((i) => i.checked).reduce((s2, i) => s2 + (i.est_price ?? 0) * i.quantity, 0));
+      return {
+        nome: l.name, data: l.list_date, situacao: l.status === 'done' ? 'finalizada' : 'em andamento',
+        meta_de_gasto: l.budget == null ? null : r2(Number(l.budget)),
+        gasto: l.transaction_id && paid.has(l.transaction_id) ? r2(paid.get(l.transaction_id)!) : cart,
+        itens_pegos: its.filter((i) => i.checked).slice(0, 40).map((i) => i.name),
+        itens_que_faltaram: its.filter((i) => !i.checked).slice(0, 40).map((i) => i.name),
+      };
+    });
+  }
+
   return {
     hoje: today,
     CATEGORIAS: { despesa: roots('expense'), receita: roots('income') },
@@ -152,6 +228,9 @@ export async function buildChatContext(db: SupabaseClient, today: string, who?: 
       .map((x) => ({ nome: x.name, saldo_devedor: r2(Number(x.balance)), juros_ao_mes_pct: Number(x.monthly_rate) })),
     cartoes_de_credito: cards,
     investimentos: investments,
+    historico_mensal_12_meses: historico,
+    ...(garagem ? { motorista_veiculos_manutencoes_e_turnos: garagem } : {}),
+    ...(listas_de_supermercado ? { supermercado_listas_recentes: listas_de_supermercado } : {}),
     ...(motorista ? { motorista_de_app_no_mes: motorista } : {}),
     ...(supermercado ? { supermercado_lista_aberta: supermercado } : {}),
     ...(mei ? { mei } : {}),

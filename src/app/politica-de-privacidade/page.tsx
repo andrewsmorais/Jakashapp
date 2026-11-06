@@ -15,11 +15,11 @@ export default function PrivacidadePage() {
 
       <h2>1. Quais dados coletamos</h2>
       <ul>
-        <li><strong>Cadastro:</strong> nome, e-mail e, ao assinar, CPF ou CNPJ (necessário para emitir a cobrança).</li>
-        <li><strong>Dados financeiros que você registra:</strong> lançamentos, categorias, contas, cartões, contas a pagar, limites, objetivos, dívidas, investimentos, arquivos que você importa, imagens que você escolhe para os selos de contas e cartões e, se usar o Motorista de app, seus carros e dias de trabalho (horários, km rodados, ganhos por plataforma e gastos).</li>
+        <li><strong>Cadastro:</strong> nome, e-mail e, se você escolher colocar, telefone e foto do perfil. O login pode ser feito com a Apple ou com o Google.</li>
+        <li><strong>Dados financeiros que você registra:</strong> lançamentos, categorias, contas, cartões, contas a pagar, limites, objetivos, dívidas, investimentos, arquivos que você importa, imagens que você escolhe para os selos de contas e cartões e, se usar o Motorista de app, seus veículos (nome, placa e foto, se você colocar), turnos de trabalho (horários, km rodados, ganhos por plataforma e gastos) e gastos com mecânica; e, se usar o Supermercado, sua lista de compras e as fotos de notas fiscais que você enviar para leitura.</li>
         <li><strong>Conversas com a Jaki:</strong> o texto que você escreve no Chat da Jaki, dentro do app, e as respostas.</li>
         <li><strong>Lançamento por voz:</strong> ao tocar no microfone, a sua voz vira texto pelo reconhecimento de fala do seu aparelho ou navegador e o Jakash recebe só o texto. O áudio não é gravado nem guardado por nós. Só em navegadores sem reconhecimento de fala, um áudio de até 20 segundos é enviado para ser transcrito e descartado em seguida.</li>
-        <li><strong>Pagamento:</strong> status da assinatura e histórico de cobranças. Dados de cartão são digitados na página segura do Asaas e <strong>não ficam armazenados no Jakash</strong>.</li>
+        <li><strong>Assinatura:</strong> plano (Mensal ou Anual), status e datas da assinatura e o identificador da compra na App Store, que a Apple nos informa. O pagamento é feito à Apple: o Jakash <strong>não recebe nem guarda dados do seu cartão</strong>.</li>
         <li><strong>Dados técnicos:</strong> informações básicas de acesso e segurança (como registros de erro e horário de uso). No app para iPhone, também o identificador de notificação do aparelho, usado para enviar avisos.</li>
       </ul>
 
@@ -27,7 +27,7 @@ export default function PrivacidadePage() {
       <ul>
         <li>Prestar o serviço: registrar lançamentos, calcular saldos, relatórios e lembretes.</li>
         <li>Montar o plano para quitar suas dívidas: as contas são feitas no próprio app com os valores que você cadastrou, e a inteligência artificial só escreve a explicação.</li>
-        <li>Cobrar a assinatura e dar suporte.</li>
+        <li>Confirmar com a Apple a sua assinatura, liberar o acesso e dar suporte.</li>
         <li>Enviar avisos que você ativou (contas a vencer, por push ou e-mail).</li>
         <li>Manter a segurança, prevenir fraudes e cumprir obrigações legais.</li>
         <li>Melhorar o produto, de forma agregada.</li>
@@ -42,17 +42,17 @@ export default function PrivacidadePage() {
       <ul>
         <li><strong>Supabase:</strong> banco de dados e autenticação.</li>
         <li><strong>Vercel:</strong> hospedagem do site e do aplicativo.</li>
-        <li><strong>Asaas:</strong> processamento de pagamentos e assinaturas.</li>
-        <li><strong>OpenAI:</strong> respostas do Chat da Jaki e leitura de arquivos importados pela inteligência artificial, frases do lançamento por voz que o app não conseguiu entender sozinho, transcrição de áudio nos navegadores sem reconhecimento de fala e redação da explicação do plano de dívidas (ela recebe valores e nomes das dívidas que você cadastrou, nunca CPF).</li>
+        <li><strong>OpenAI:</strong> respostas do Chat da Jaki e leitura de arquivos importados e de fotos de notas fiscais pela inteligência artificial, frases do lançamento por voz que o app não conseguiu entender sozinho, transcrição de áudio nos navegadores sem reconhecimento de fala e redação da explicação do plano de dívidas (ela recebe valores e nomes das dívidas que você cadastrou, nunca CPF).</li>
         <li><strong>Resend:</strong> envio de e-mails do serviço.</li>
         <li><strong>WhatsApp (Meta):</strong> só se você optar por falar com o suporte pelo WhatsApp. O Jakash não envia mensagens pelo WhatsApp; a conversa que você abre por lá segue as regras da Meta.</li>
-        <li><strong>Apple:</strong> no app para iPhone, login com a Apple, assinatura pela App Store, avisos no aparelho (notificações) e reconhecimento de fala do lançamento por voz (no próprio iPhone, quando possível). A Apple trata os pagamentos feitos na App Store; o Jakash não recebe os dados do seu cartão.</li>
+        <li><strong>Google:</strong> login com o Google, se você escolher essa opção.</li>
+        <li><strong>Apple:</strong> no app para iPhone, login com a Apple, assinatura e pagamento pela App Store, avisos no aparelho (notificações) e reconhecimento de fala do lançamento por voz (no próprio iPhone, quando possível). A Apple trata os pagamentos feitos na App Store; o Jakash não recebe os dados do seu cartão.</li>
       </ul>
       <p>Alguns desses prestadores ficam fora do Brasil, o que significa transferência internacional de dados, feita com as garantias previstas na LGPD. Também podemos compartilhar dados quando a lei ou uma ordem de autoridade exigir.</p>
       <p><strong>Gestão compartilhada:</strong> se você convidar alguém, essa pessoa verá os dados financeiros compartilhados (veja os <Link href="/termos-de-uso">Termos de uso</Link>). Perfil, assinatura e conversas do chat não são compartilhados.</p>
 
       <h2>5. Por quanto tempo guardamos</h2>
-      <p>Mantemos seus dados enquanto sua conta existir. Ao excluir a conta, apagamos seus dados do aplicativo, exceto o que a lei nos obrigar a guardar (por exemplo, registros de cobrança e fiscais) pelo prazo legal.</p>
+      <p>Mantemos seus dados enquanto sua conta existir. Ao excluir a conta, apagamos seus dados do aplicativo, exceto o que a lei nos obrigar a guardar pelo prazo legal. Excluir a conta não cancela a assinatura na Apple: cancele também em Ajustes do iPhone › seu nome › Assinaturas.</p>
 
       <h2>6. Seus direitos</h2>
       <p>Você pode, a qualquer momento: confirmar que tratamos seus dados; acessá-los; corrigi-los; pedir portabilidade; revogar consentimentos; pedir a eliminação dos dados tratados com consentimento; e saber com quem os compartilhamos. No app, em <strong>Configurações › Dados</strong>, você exporta suas informações, recomeça do zero ou exclui a conta. Para outros pedidos, use a página de <Link href="/contato">Contato</Link>.</p>

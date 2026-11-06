@@ -25,7 +25,7 @@ export default function CookiesPage() {
       <p>Hoje o Jakash <strong>não usa cookies de publicidade nem de análise de terceiros</strong> (como pixels de anúncios ou ferramentas de rastreamento). Se isso mudar, atualizaremos esta página e pediremos o seu consentimento antes.</p>
 
       <h2>4. Cookies de terceiros</h2>
-      <p>Ao abrir a página de pagamento do Asaas ou o nosso perfil no Instagram, você sai do Jakash e esses sites seguem as próprias políticas de cookies.</p>
+      <p>Ao abrir o nosso perfil no Instagram ou a conversa de suporte no WhatsApp, você sai do Jakash e esses sites seguem as próprias políticas de cookies.</p>
 
       <h2>5. Como controlar</h2>
       <p>Você pode apagar ou bloquear cookies nas configurações do seu navegador. Atenção: bloquear os essenciais impede o login e o uso do aplicativo.</p>

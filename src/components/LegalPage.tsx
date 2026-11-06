@@ -3,7 +3,7 @@ import { Footer } from "@/components/Footer";
 import { JsonLd } from "@/components/JsonLd";
 import { breadcrumbJsonLd } from "@/lib/seo";
 
-export const LEGAL_UPDATED = "23 de outubro de 2026";
+export const LEGAL_UPDATED = "6 de novembro de 2026";
 
 // Casca das páginas institucionais (termos, privacidade, reembolso, cookies, sobre, contato).
 export function LegalPage({ title, subtitle, path, updated = true, children }: { title: string; subtitle?: string; path: string; updated?: boolean; children: React.ReactNode }) {

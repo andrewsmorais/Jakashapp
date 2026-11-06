@@ -25,17 +25,17 @@ export default function TermosPage() {
       </ul>
 
       <h2>3. Planos, teste grátis e pagamento</h2>
-      <p>Para usar o Jakash é preciso assinar o plano Mensal ou o Anual. Os valores e o que a assinatura inclui estão na página inicial e em Configurações › Planos e assinatura. Os valores podem mudar, mas a alteração só vale para a renovação seguinte e depois de avisarmos você.</p>
+      <p>Para usar o Jakash é preciso assinar o plano Mensal ou o Anual. Os valores e o que a assinatura inclui aparecem no app, na tela de planos e em Configurações › Planos e assinatura. Os valores podem mudar, mas a alteração só vale para a renovação seguinte e depois de avisarmos você.</p>
       <ul>
         <li><strong>Teste grátis:</strong> os dois planos começam com 7 dias grátis. Se você não cancelar até 24 horas antes do fim do teste, a cobrança começa ao fim dele.</li>
         <li><strong>Cobrança:</strong> recorrente (todo mês no Mensal, todo ano no Anual), feita pela Apple na sua conta da App Store, ao assinar pelo app para iPhone.</li>
         <li><strong>Troca de plano:</strong> você troca entre Mensal e Anual nos Ajustes do iPhone › seu nome › Assinaturas, conforme as regras da Apple.</li>
-        <li><strong>Atraso:</strong> se o pagamento não for confirmado, o acesso pode ser limitado até a regularização.</li>
+        <li><strong>Sem assinatura:</strong> sem uma assinatura ativa (ou no período de teste), o acesso ao app fica bloqueado até você assinar de novo. Seus dados continuam guardados.</li>
       </ul>
-      <p><strong>Assinatura feita no app para iPhone:</strong> quando você assina pelo app, a cobrança é feita pela sua conta da Apple (App Store). O pagamento é debitado na confirmação da compra e a assinatura renova sozinha todo mês, pelo mesmo valor, a menos que seja cancelada pelo menos 24 horas antes do fim do período. Você gerencia e cancela em Ajustes do iPhone › seu nome › Assinaturas, e os pedidos de reembolso seguem as regras da Apple. Teste grátis e formas de pagamento do site (Pix e boleto) não valem para assinaturas feitas pela App Store.</p>
+      <p><strong>Renovação automática:</strong> depois do teste grátis, o pagamento é cobrado na sua conta da Apple, e a assinatura renova sozinha pelo mesmo valor (todo mês no Mensal, todo ano no Anual), a menos que seja cancelada pelo menos 24 horas antes do fim do período. Você gerencia e cancela em Ajustes do iPhone › seu nome › Assinaturas, e os pedidos de reembolso seguem as regras da Apple.</p>
 
       <h2>4. Cancelamento e reembolso</h2>
-      <p>Você pode cancelar a renovação quando quiser, sem multa, em Configurações › Planos, e continua com acesso até o fim do período já pago. As regras de reembolso estão na <Link href="/politica-de-reembolso">Política de reembolso</Link>.</p>
+      <p>Você pode cancelar a renovação quando quiser, sem multa, em Ajustes do iPhone › seu nome › Assinaturas, e continua com acesso até o fim do período já pago. As regras de reembolso estão na <Link href="/politica-de-reembolso">Política de reembolso</Link>.</p>
 
       <h2>5. Gestão compartilhada</h2>
       <p>Você pode convidar até 2 pessoas (3 no total, contando com você) para dividir as finanças. Quem aceita o convite passa a ver e editar os dados financeiros compartilhados (contas, lançamentos, cartões, contas a pagar, limites, objetivos, dívidas e investimentos). Perfil, assinatura e conversas do chat continuam privados. Só convide quem você conhece e confia; qualquer participante pode encerrar o compartilhamento a qualquer momento.</p>

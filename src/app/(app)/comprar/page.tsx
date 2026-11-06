@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Check, CloudOff, ShoppingCart, Trash2 } from "lucide-react";
+import { Check, CloudOff, Mic, ShoppingCart, Square, Trash2 } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { useCards } from "@/lib/useCards";
 import { useUsageType } from "@/lib/useUsageType";
@@ -11,7 +11,8 @@ import { brl, monthRange, parseMoney, todayISO } from "@/lib/format";
 import { invoiceMonthFor } from "@/lib/cards";
 import { rootId, type CatRow } from "@/lib/categories";
 import { loadCategoryState, visibleCats } from "@/lib/categoryVisibility";
-import { budgetLeft, listTotals, parseShoppingInput, quantityLabel, suggestNames, type ShopItem } from "@/lib/shopping";
+import { detectVoiceMethod, startVoice, voiceErrorText, type VoiceMethod, type VoiceSession } from "@/lib/voiceInput";
+import { budgetLeft, goalStatus, listTotals, parseShoppingInput, quantityLabel, suggestNames, type ShopItem } from "@/lib/shopping";
 import { BackTitle, Card, Empty, ErrorNote, Label, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
 
 type ListRow = { id: string; user_id: string; name: string; is_business: boolean; created_at: string };
@@ -40,6 +41,13 @@ export default function ComprarPage() {
   const [foodSpent, setFoodSpent] = useState(0);
   const [finishing, setFinishing] = useState(false);
   const [done, setDone] = useState<string | null>(null);
+  const [shop, setShop] = useState(false); // false = planejando em casa; true = no mercado (marca o que pegou)
+  const [goal, setGoal] = useState<number | null>(null);
+  const [voiceMethod, setVoiceMethod] = useState<VoiceMethod>("none");
+  const [listening, setListening] = useState(false);
+  const [heard, setHeard] = useState("");
+  const voice = useRef<VoiceSession | null>(null);
+  useEffect(() => { setVoiceMethod(detectVoiceMethod()); return () => { voice.current?.cancel(); }; }, []);
 
   const ops = useRef(new Map<string, Op>());
   const flushing = useRef(false);
@@ -52,7 +60,14 @@ export default function ComprarPage() {
         const v = op.v;
         let err: unknown = null;
         if (op.del) ({ error: err } = await supabase.from("shopping_items").delete().eq("id", id));
-        else if (op.insert) ({ error: err } = await supabase.from("shopping_items").upsert({ ...op.insert, ...(op.patch ?? {}) }, { onConflict: "id" }));
+        else if (op.insert) {
+          ({ error: err } = await supabase.from("shopping_items").upsert({ ...op.insert, ...(op.patch ?? {}) }, { onConflict: "id" }));
+          // Banco ainda sem a coluna "extra": salva o item sem a marca, para não perder o que a pessoa digitou.
+          if (err && op.insert.extra) {
+            const { extra: _extra, ...plain } = op.insert; // eslint-disable-line @typescript-eslint/no-unused-vars
+            ({ error: err } = await supabase.from("shopping_items").upsert({ ...plain, ...(op.patch ?? {}) }, { onConflict: "id" }));
+          }
+        }
         else if (op.patch) ({ error: err } = await supabase.from("shopping_items").update(op.patch).eq("id", id));
         if (!err && ops.current.get(id)?.v === v) ops.current.delete(id);
       }
@@ -97,10 +112,17 @@ export default function ComprarPage() {
       supabase.from("shopping_items").select("name").order("created_at", { ascending: false }).limit(400),
     ]);
     setList(cur);
+    // Meta e "fora da lista": colunas novas. Se ainda não existirem no banco, a lista continua funcionando sem elas.
+    const [bg, ex] = await Promise.all([
+      supabase.from("shopping_lists").select("budget").eq("id", cur.id).maybeSingle(),
+      supabase.from("shopping_items").select("id,extra").eq("list_id", cur.id),
+    ]);
+    setGoal(!bg.error && (bg.data as { budget: number | string | null } | null)?.budget != null ? Number((bg.data as { budget: number | string }).budget) : null);
+    const extraIds = new Set(((ex.error ? [] : ex.data ?? []) as { id: string; extra: boolean }[]).filter((x) => x.extra).map((x) => x.id));
     if (!it.error) {
       // Mantém alterações ainda não salvas por cima do que veio do servidor.
-      const server = ((it.data ?? []) as ShopItem[]).map((x) => ({ ...x, quantity: Number(x.quantity), est_price: x.est_price == null ? null : Number(x.est_price) }));
-      const merged = server.filter((x) => !ops.current.get(x.id)?.del).map((x) => ({ ...x, ...(ops.current.get(x.id)?.patch ?? {}) }));
+      const server = ((it.data ?? []) as ShopItem[]).map((x) => ({ ...x, extra: extraIds.has(x.id), quantity: Number(x.quantity), est_price: x.est_price == null ? null : Number(x.est_price) }));
+      const merged: ShopItem[] = server.filter((x) => !ops.current.get(x.id)?.del).map((x) => ({ ...x, ...(ops.current.get(x.id)?.patch ?? {}) }));
       for (const [id, op] of ops.current) if (op.insert && op.insert.list_id === cur.id && !merged.some((m) => m.id === id)) merged.push({ ...op.insert, ...(op.patch ?? {}) });
       setItems(merged);
     }
@@ -142,16 +164,40 @@ export default function ComprarPage() {
 
   function add(e: React.FormEvent) {
     e.preventDefault();
+    addFromText(text);
+    setText("");
+  }
+
+  function addFromText(input: string) {
     if (!list || !userId) return;
-    const parsed = parseShoppingInput(text);
+    const parsed = parseShoppingInput(input);
     if (parsed.length === 0) return;
     const base = items.reduce((m, i) => Math.max(m, i.position), 0);
     const rows: ShopItem[] = parsed.map((p, i) => ({
-      id: crypto.randomUUID(), list_id: list.id, created_by: userId, name: p.name, quantity: p.quantity, unit: p.unit, est_price: null, checked: false, position: base + i + 1,
+      id: crypto.randomUUID(), list_id: list.id, created_by: userId, name: p.name, quantity: p.quantity, unit: p.unit, est_price: null, checked: false, position: base + i + 1, ...(shop ? { extra: true } : {}),
     }));
     setItems((cur) => [...cur, ...rows]);
     for (const r of rows) enqueue(r.id, (op) => ({ ...op, insert: r }));
-    setText("");
+  }
+
+  async function toggleMic() {
+    if (listening) { voice.current?.stop(); return; }
+    setHeard(""); setError(null); setListening(true);
+    const s = await startVoice(voiceMethod, {
+      onPartial: (t) => setHeard(t),
+      onLevel: () => undefined,
+      onPhase: () => undefined,
+      onFinal: (t) => { voice.current = null; setListening(false); setHeard(""); addFromText(t); },
+      onError: (code, msg) => { voice.current = null; setListening(false); setHeard(""); setError(code === "limit" || code === "not-allowed-plan" ? msg || voiceErrorText(code, false) : voiceErrorText(code, false)); },
+    });
+    voice.current = s;
+  }
+
+  async function saveGoal(v: number | null) {
+    setGoal(v);
+    if (!list) return;
+    const { error: err } = await supabase.from("shopping_lists").update({ budget: v }).eq("id", list.id);
+    if (err) setError("Não foi possível guardar a meta agora.");
   }
 
   function addName(name: string) {
@@ -176,6 +222,8 @@ export default function ComprarPage() {
   const suggestions = useMemo(() => suggestNames(history, items.map((i) => i.name)), [history, items]);
   const sorted = useMemo(() => [...items].sort((a, b) => Number(a.checked) - Number(b.checked) || a.position - b.position), [items]);
   const left = budgetLeft(foodLimit, foodSpent);
+  // Em casa a meta é comparada com o estimado; no mercado, com o que já foi para o carrinho.
+  const gs = goalStatus(goal, shop ? totals.cart : totals.estimated);
 
   // --- Finalizar a compra ---
   const [fin, setFin] = useState({ amount: "", description: "", category_id: "", pay: "", date: todayISO() });
@@ -222,7 +270,7 @@ export default function ComprarPage() {
 
   return (
     <div className="max-w-2xl mx-auto pb-24">
-      <BackTitle title="Comprar" subtitle="Monte a lista, marque no mercado e finalize para lançar o gasto." />
+      <BackTitle title="Comprar" subtitle="Planeje o que comprar, some no mercado o que for pegando e lance o gasto." />
 
       {isMei && (
         <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#161616] mb-4" role="group" aria-label="Qual lista">
@@ -243,6 +291,24 @@ export default function ComprarPage() {
         <p className="mb-3 flex items-center gap-2 text-xs font-bold text-amber-600 dark:text-amber-400"><CloudOff size={14} /> Sem sinal por enquanto. {waiting} alteração(ões) serão salvas assim que voltar.</p>
       )}
 
+      <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#161616] mb-4" role="group" aria-label="Etapa da compra">
+        {([[false, "Planejar a compra"], [true, "Estou no mercado"]] as const).map(([k, l]) => (
+          <button key={String(k)} onClick={() => setShop(k)} aria-pressed={shop === k} className={`py-2.5 rounded-xl text-sm font-bold ${shop === k ? "bg-white dark:bg-[#262626] shadow-sm" : "text-gray-500"}`}>{l}</button>
+        ))}
+      </div>
+
+      <div className="mb-4 flex items-center gap-3 rounded-2xl border border-white/70 dark:border-white/5 bg-white/60 dark:bg-[#161616] px-4 py-3">
+        <label htmlFor="meta" className="text-sm font-bold flex-1">Quanto quero gastar<span className="block text-xs font-normal text-gray-500">Sua meta para esta compra</span></label>
+        <input id="meta" key={goal ?? "none"} className="w-28 rounded-xl border border-white/70 dark:border-white/5 bg-white/70 dark:bg-[#1E1E1E] px-2.5 py-2 text-sm text-right" inputMode="decimal" placeholder="R$ 0,00"
+          defaultValue={goal != null ? String(goal).replace(".", ",") : ""}
+          onBlur={(e) => {
+            const raw = e.target.value.trim();
+            const v = raw === "" ? null : parseMoney(raw);
+            if (v !== null && (Number.isNaN(v) || v < 0)) return;
+            if (v !== goal) void saveGoal(v);
+          }} />
+      </div>
+
       {left !== null ? (
         <div className={`mb-4 rounded-2xl border px-4 py-3 text-sm ${left < 0 ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300" : totals.estimated > left && totals.estimated > 0 ? "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200" : "border-white/70 dark:border-white/5 bg-white/60 dark:bg-[#161616] text-gray-600 dark:text-gray-300"}`}>
           {left < 0
@@ -254,7 +320,13 @@ export default function ComprarPage() {
       )}
 
       <form onSubmit={add} className="flex gap-2 mb-3">
-        <input className={inputCls} value={text} onChange={(e) => setText(e.target.value)} placeholder="Ex.: 2 leite, pão, 1kg arroz" aria-label="Adicionar itens à lista" maxLength={400} />
+        <input className={inputCls} value={listening && heard ? heard : text} onChange={(e) => setText(e.target.value)} placeholder={shop ? "Pegou algo que não estava na lista?" : "Ex.: 2 leite, pão, 1kg arroz"} aria-label="Adicionar itens à lista" maxLength={400} />
+        {voiceMethod !== "none" && (
+          <button type="button" onClick={toggleMic} aria-label={listening ? "Parar de ouvir" : "Falar os itens"} disabled={!list}
+            className={`w-11 h-11 shrink-0 self-center rounded-full flex items-center justify-center text-white ${listening ? "bg-red-500" : "bg-brand-dark dark:bg-brand-vivid"}`}>
+            {listening ? <Square size={16} /> : <Mic size={18} />}
+          </button>
+        )}
         <button type="submit" className={btnCls + " shrink-0"} disabled={!text.trim() || !list}>Adicionar</button>
       </form>
 
@@ -274,19 +346,19 @@ export default function ComprarPage() {
         ) : (
           <ul>
             {sorted.map((i) => (
-              <li key={i.id} className="flex items-center gap-3 px-2 py-1.5 border-b last:border-b-0 border-gray-100 dark:border-white/5">
+              <li key={i.id} className={`flex items-center gap-3 px-2 py-1.5 border-b last:border-b-0 border-gray-100 dark:border-white/5 border-l-4 rounded-l-lg ${shop ? (i.checked ? "border-l-blue-500 bg-blue-500/5" : "border-l-red-500 bg-red-500/5") : "border-l-transparent"}`}>
                 <button onClick={() => toggle(i)} aria-pressed={i.checked} aria-label={`${i.checked ? "Desmarcar" : "Marcar"} ${i.name}`}
-                  className={`w-11 h-11 shrink-0 rounded-full flex items-center justify-center border-2 transition-colors ${i.checked ? "bg-emerald-500 border-emerald-500 text-white" : "border-gray-300 dark:border-white/20 text-transparent"}`}>
+                  className={`w-11 h-11 shrink-0 rounded-full flex items-center justify-center border-2 transition-colors ${i.checked ? "bg-blue-500 border-blue-500 text-white" : "border-gray-300 dark:border-white/20 text-transparent"}`}>
                   <Check size={20} />
                 </button>
                 <div className="min-w-0 flex-1">
-                  <p className={`font-bold truncate ${i.checked ? "line-through text-gray-400" : ""}`}>{i.name}</p>
+                  <p className={`font-bold truncate ${i.checked ? (shop ? "text-blue-600 dark:text-blue-400" : "line-through text-gray-400") : shop ? "text-red-600 dark:text-red-400" : ""}`}>{i.name}{i.extra && <span className="ml-2 rounded-full bg-amber-100 dark:bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300">fora da lista</span>}</p>
                   {quantityLabel(i) && <p className="text-xs text-gray-500">{quantityLabel(i)}</p>}
                 </div>
                 <input
                   key={`${i.id}-${i.est_price ?? ""}`}
                   className="w-24 rounded-xl border border-white/70 dark:border-white/5 bg-white/70 dark:bg-[#1E1E1E] px-2.5 py-2 text-sm text-right"
-                  inputMode="decimal" placeholder="R$" aria-label={`Preço de ${i.name}`}
+                  inputMode="decimal" placeholder={shop ? "Preço" : "R$"} aria-label={`Preço de ${i.name}`}
                   defaultValue={i.est_price != null ? String(i.est_price).replace(".", ",") : ""}
                   onBlur={(e) => {
                     const raw = e.target.value.trim();
@@ -306,8 +378,16 @@ export default function ComprarPage() {
         <div className="sticky bottom-20 md:bottom-4 mt-4 rounded-[28px] border border-white/80 dark:border-white/5 bg-white/90 dark:bg-[#161616] backdrop-blur-xl shadow-lg p-4">
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div><p className="text-[11px] font-bold text-gray-500">Estimado</p><p className="text-lg font-extrabold">{money(brl(totals.estimated))}</p></div>
-            <div><p className="text-[11px] font-bold text-gray-500">No carrinho ({totals.checked}/{totals.total})</p><p className="text-lg font-extrabold">{money(brl(totals.cart))}</p></div>
+            <div><p className="text-[11px] font-bold text-blue-600 dark:text-blue-400">No carrinho ({totals.checked}/{totals.total})</p><p className="text-lg font-extrabold">{money(brl(totals.cart))}</p></div>
           </div>
+          {gs && (
+            <div className="mb-3" role="status">
+              <div className="h-2.5 w-full rounded-full bg-gray-200 dark:bg-[#262626] overflow-hidden"><div className={`h-full rounded-full ${gs.over ? "bg-red-500" : gs.pct >= 85 ? "bg-amber-500" : "bg-blue-500"}`} style={{ width: `${gs.pct}%` }} /></div>
+              <p className={`mt-1.5 text-xs font-bold ${gs.over ? "text-red-600 dark:text-red-400" : "text-gray-500"}`}>
+                {gs.over ? `Passou ${money(brl(-gs.left))} da meta de ${money(brl(goal ?? 0))}` : `Ainda cabem ${money(brl(gs.left))} da meta de ${money(brl(goal ?? 0))}`}
+              </p>
+            </div>
+          )}
           <button onClick={openFinish} className={btnCls + " w-full"}><ShoppingCart size={18} /> Finalizar compra</button>
         </div>
       )}

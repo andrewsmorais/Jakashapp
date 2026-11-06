@@ -11,6 +11,7 @@ export type ShopItem = {
   est_price: number | null;
   checked: boolean;
   position: number;
+  extra?: boolean; // entrou no carrinho no mercado sem estar na lista planejada
 };
 
 const UNIT = "kg|g|l|ml|un|cx|pct|dz|x";
@@ -78,4 +79,11 @@ export function suggestNames(history: string[], current: string[], limit = 8): s
 export function budgetLeft(limit: number | null | undefined, spent: number): number | null {
   if (limit == null || !(limit > 0)) return null;
   return r2(limit - spent);
+}
+
+/** Situação da compra em relação à meta: quanto falta, quanto passou e a % usada (0 a 100 para a barra). */
+export function goalStatus(goal: number | null | undefined, spent: number): { left: number; over: boolean; pct: number } | null {
+  if (goal == null || !(goal > 0)) return null;
+  const left = r2(goal - spent);
+  return { left, over: left < 0, pct: Math.min(100, Math.max(0, Math.round((spent / goal) * 100))) };
 }

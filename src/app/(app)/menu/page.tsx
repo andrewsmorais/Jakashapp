@@ -5,18 +5,21 @@ import { useEffect, useState } from "react";
 import { type LucideIcon } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { useUsageType } from "@/lib/useUsageType";
+import { avatarUrl } from "@/lib/avatar";
+import { UserAvatar } from "@/components/UserAvatar";
 import { NAV_FOOTER, groupsFor } from "@/lib/nav";
 
 type Tile = { icon: LucideIcon; label: string; href: string };
 
 // Saudação fixa (sem "bom dia/boa tarde/boa noite").
 function greeting() {
-  return "Olá, tudo bem?";
+  return "Que bom te ver por aqui,";
 }
 
 export default function MenuPage() {
   const { supabase, userId, ready } = useSupabase();
   const [name, setName] = useState("");
+  const [photo, setPhoto] = useState<string | null>(null);
   const { isMei } = useUsageType();
   const groups = groupsFor(isMei).map((g) => ({ title: g.title, tiles: g.items as Tile[] }));
   // Painel do dono fica só em Configurações (e só aparece para a conta de administrador).
@@ -25,18 +28,19 @@ export default function MenuPage() {
 
   useEffect(() => {
     if (!ready || !userId) return;
-    supabase.from("profiles").select("full_name").maybeSingle().then(({ data }) => setName(data?.full_name ?? ""));
+    supabase.from("profiles").select("full_name,avatar_path").maybeSingle().then(async ({ data }) => {
+      setName(data?.full_name ?? "");
+      setPhoto(await avatarUrl(supabase, (data?.avatar_path as string | null) ?? null));
+    });
   }, [ready, userId, supabase]);
-
-  const initials = name.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "J";
 
   return (
     <div className="max-w-3xl mx-auto pb-10">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 rounded-full bg-brand-dark/10 dark:bg-[#262626] text-brand-dark dark:text-brand-soft font-extrabold flex items-center justify-center">{initials}</div>
+        <Link href="/configuracoes/perfil" aria-label="Meu perfil"><UserAvatar name={name} url={photo} size={48} /></Link>
         <div>
           <p className="text-sm text-gray-500">{greeting()}</p>
-          <p className="font-extrabold text-lg leading-tight">{name || "Bem-vindo"}</p>
+          <p className="font-extrabold text-lg leading-tight">{name.split(" ")[0] || "Bem-vindo"}</p>
         </div>
       </div>
       <h1 className="text-2xl font-extrabold mb-1">Tudo</h1>

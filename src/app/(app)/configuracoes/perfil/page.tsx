@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Lock, Pencil } from "lucide-react";
+import { Camera, ImageIcon, Lock, Pencil } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { formatDateBR } from "@/lib/format";
-import { BackTitle, Card, Label, ErrorNote, inputCls, btnCls } from "@/components/ui/page";
+import { BackTitle, Card, Label, ErrorNote, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
+import { avatarUrl, removeAvatar, uploadAvatar } from "@/lib/avatar";
+import { UserAvatar } from "@/components/UserAvatar";
 
 // yyyy-mm-dd (valor do <input type="date">) <-> "—"/formatado para exibição.
 function toInputDate(iso: string | null): string {
@@ -22,13 +24,19 @@ export default function PerfilPage() {
   const [birthDraft, setBirthDraft] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [photoPath, setPhotoPath] = useState<string | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
 
   useEffect(() => {
     if (!ready || !userId) return;
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? ""));
-    supabase.from("profiles").select("full_name,birth_date").maybeSingle().then(({ data }) => {
+    supabase.from("profiles").select("full_name,birth_date,avatar_path").maybeSingle().then(async ({ data }) => {
       setName(data?.full_name ?? "");
       setBirth(data?.birth_date ?? null);
+      const p = (data?.avatar_path as string | null) ?? null;
+      setPhotoPath(p);
+      setPhotoUrl(await avatarUrl(supabase, p));
     });
   }, [ready, userId, supabase]);
 
@@ -55,14 +63,46 @@ export default function PerfilPage() {
     if (await saveProfile({ birth_date: birthDraft || null })) { setEditingBirth(false); setMsg("Data de nascimento atualizada."); }
   }
 
-  const initials = name.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "J";
+  async function pickPhoto(file: File | undefined) {
+    if (!file || !userId) return;
+    setPhotoBusy(true); setError(null); setMsg(null);
+    try {
+      const p = await uploadAvatar(supabase, userId, file, photoPath);
+      setPhotoPath(p); setPhotoUrl(await avatarUrl(supabase, p)); setMsg("Foto atualizada.");
+      window.dispatchEvent(new Event("jakash:changed"));
+    } catch (e) { setError(e instanceof Error ? e.message : "Não foi possível enviar a foto."); }
+    setPhotoBusy(false);
+  }
+
+  async function dropPhoto() {
+    if (!photoPath || !userId) return;
+    setPhotoBusy(true); setError(null); setMsg(null);
+    try { await removeAvatar(supabase, userId, photoPath); setPhotoPath(null); setPhotoUrl(null); setMsg("Foto removida."); window.dispatchEvent(new Event("jakash:changed")); }
+    catch (e) { setError(e instanceof Error ? e.message : "Não foi possível tirar a foto."); }
+    setPhotoBusy(false);
+  }
+
 
   return (
     <div className="max-w-xl mx-auto pb-20">
       <BackTitle title="Meu perfil" subtitle="Atualize suas informações pessoais." href="/configuracoes" />
       <Card className="mb-4 flex items-center gap-4">
-        <div className="w-16 h-16 rounded-full bg-brand-dark/10 dark:bg-[#262626] text-brand-dark dark:text-brand-soft text-xl font-extrabold flex items-center justify-center">{initials}</div>
-        <p className="text-sm text-gray-500">A foto de perfil chega em uma próxima versão.</p>
+        <UserAvatar name={name} url={photoUrl} size={72} />
+        <div className="flex-1 min-w-0 space-y-2">
+          <p className="font-extrabold">Foto de perfil</p>
+          <div className="flex flex-wrap gap-2">
+            <label className={btnGhostCls + " !py-2 !px-3 !text-xs cursor-pointer" + (photoBusy ? " opacity-60 pointer-events-none" : "")}>
+              <Camera size={14} /> Tirar foto
+              <input type="file" accept="image/*" capture="user" className="hidden" onChange={(e) => { void pickPhoto(e.target.files?.[0]); e.target.value = ""; }} />
+            </label>
+            <label className={btnGhostCls + " !py-2 !px-3 !text-xs cursor-pointer" + (photoBusy ? " opacity-60 pointer-events-none" : "")}>
+              <ImageIcon size={14} /> Escolher da galeria
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => { void pickPhoto(e.target.files?.[0]); e.target.value = ""; }} />
+            </label>
+            {photoPath && <button type="button" onClick={dropPhoto} disabled={photoBusy} className="text-xs font-bold text-red-500 px-1">Tirar foto</button>}
+          </div>
+          {photoBusy && <p className="text-xs text-gray-400">Enviando…</p>}
+        </div>
       </Card>
       <Card className="divide-y divide-gray-100 dark:divide-[#262626] !py-2">
         <div className="py-4">

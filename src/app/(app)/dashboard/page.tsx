@@ -29,7 +29,7 @@ type Tab = "expense" | "income" | "pending";
 
 // Saudação fixa (sem "bom dia/boa tarde/boa noite").
 function greeting() {
-  return "Olá, tudo bem?";
+  return "Que bom te ver por aqui,";
 }
 
 function Kpi({ icon: Icon, label, value, tone, hint }: { icon: typeof Landmark; label: string; value: string; tone: string; hint?: string }) {
@@ -139,7 +139,7 @@ export default function DashboardPage() {
       <div className="flex items-start justify-between mb-5">
         <div>
           <p className="text-sm text-gray-500 dark:text-gray-400">{greeting()}</p>
-          <h1 className="text-2xl md:text-3xl font-extrabold">{name || "bem-vindo"} 👋</h1>
+          <h1 className="text-2xl md:text-3xl font-extrabold">{name || "de volta"} 👋</h1>
         </div>
         <button onClick={toggle} aria-label={hide ? "Mostrar valores" : "Esconder valores"} className="w-10 h-10 rounded-full bg-white/80 dark:bg-[#161616] border border-white/80 dark:border-white/5 flex items-center justify-center text-gray-500">
           {hide ? <EyeOff size={18} /> : <Eye size={18} />}

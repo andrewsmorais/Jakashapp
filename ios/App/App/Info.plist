@@ -44,13 +44,13 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>O Jakash usa a câmera para você fotografar comprovantes e anexá-los aos seus lançamentos.</string>
+	<string>O Jakash usa a câmera para você fotografar comprovantes e notas fiscais, a sua foto de perfil e a foto do seu veículo.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>O Jakash usa o Face ID para proteger o acesso ao app, se você ativar o bloqueio nas Configurações.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>O Jakash usa o microfone só enquanto você fala um lançamento, como "gastei 50 reais no almoço". O áudio não é gravado nem guardado.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>O Jakash acessa suas fotos para você escolher comprovantes e extratos e anexá-los aos seus lançamentos.</string>
+	<string>O Jakash acessa suas fotos para você escolher comprovantes, notas fiscais e extratos, a sua foto de perfil e a foto do seu veículo.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>O Jakash usa o reconhecimento de fala da Apple para transformar o que você diz em texto e preencher o lançamento. O áudio é processado pela Apple (no próprio iPhone, quando possível) e o Jakash não o guarda.</string>
 	<key>UIApplicationSceneManifest</key>

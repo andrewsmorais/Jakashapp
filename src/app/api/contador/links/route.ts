@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getEntitlement, isEntitled } from '@/lib/entitlements';
 import { LINK_DEFAULT_DAYS, LINK_MAX_ACTIVE, hashToken, newToken } from '@/lib/accountant';
 
 // Cria e revoga links de leitura para o contador. O token completo só é devolvido na criação.
@@ -23,6 +24,7 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
 
   const admin = createAdminClient();
+  if (!isEntitled(await getEntitlement(admin, user.id))) return NextResponse.json({ error: 'Sua assinatura não está ativa.' }, { status: 402 });
   const { count } = await admin.from('accountant_links').select('id', { count: 'exact', head: true })
     .eq('user_id', user.id).is('revoked_at', null).gt('expires_at', new Date().toISOString());
   if ((count ?? 0) >= LINK_MAX_ACTIVE) {

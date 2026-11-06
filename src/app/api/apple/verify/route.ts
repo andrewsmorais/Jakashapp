@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { AppleApiError, appleIapConfigured, checkTransaction, fetchAppleTransaction, iapFlagOn } from '@/lib/appleIap';
+import { AppleApiError, appleIapConfigured, checkTransaction, fetchAppleTransaction, iapFlagOn, sandboxAllowedFor } from '@/lib/appleIap';
 import { recordAppleBillingEvent } from '@/lib/billingProfile';
 import { PLANS } from '@/lib/plans';
 
@@ -46,22 +46,36 @@ export async function POST(request: Request) {
     const check = checkTransaction(found.tx, user.id);
     if (!check.ok) return NextResponse.json({ error: REASON_MESSAGE[check.reason] ?? 'Compra inválida.' }, { status: check.reason === 'account' ? 403 : 422 });
 
-    const { error } = await admin.from('profiles').update({
+    // Compra de teste (TestFlight/Xcode/Revisão) não custa nada: em produção só vale para contas liberadas (ver sandboxAllowedFor).
+    const sandbox = found.environment === 'Sandbox';
+    if (sandbox && !sandboxAllowedFor(user.id)) {
+      return NextResponse.json({ error: 'Esta é uma compra de teste (TestFlight). Para usar o Jakash, assine pela versão da App Store.' }, { status: 403 });
+    }
+
+    const patch = {
       subscription_plan: check.plan,
       subscription_status: check.trial ? 'trial' : 'active',
       subscription_expires_at: check.expiresAt,
       billing_provider: 'apple',
       apple_original_transaction_id: check.originalTransactionId,
-    }).eq('id', user.id);
+    };
+    let { error } = await admin.from('profiles').update(patch).eq('id', user.id);
+    // 23505: esta assinatura da Apple estava ligada a OUTRA conta Jakash (o mesmo Apple ID assinou antes por ela).
+    // A transação atual foi comprada por esta conta (appAccountToken = user.id, conferido acima), então ela passa para cá
+    // e a conta antiga perde o vínculo e o acesso.
+    if (error?.code === '23505') {
+      const moved = await admin.from('profiles').update({ apple_original_transaction_id: null, subscription_status: 'canceled' })
+        .eq('apple_original_transaction_id', check.originalTransactionId).neq('id', user.id);
+      if (!moved.error) ({ error } = await admin.from('profiles').update(patch).eq('id', user.id));
+    }
     if (error) {
-      // 23505: a mesma assinatura da Apple já está ligada a outra conta (índice único).
-      if (error.code === '23505') return NextResponse.json({ error: 'Esta assinatura já está ligada a outra conta Jakash.' }, { status: 409 });
       console.error('[apple/verify] gravar perfil', error.message);
       return NextResponse.json({ error: 'Não foi possível liberar o plano agora. Tente restaurar a compra.' }, { status: 500 });
     }
 
     // No teste grátis não houve cobrança: o pagamento entra quando a Apple renovar (aviso em /api/apple/notifications).
-    if (!check.trial) await recordAppleBillingEvent(admin, { userId: user.id, transactionId: check.transactionId, kind: 'paid', plan: check.plan, amount: PLANS[check.plan].value });
+    // Compra de teste também não é receita.
+    if (!check.trial && !sandbox) await recordAppleBillingEvent(admin, { userId: user.id, transactionId: check.transactionId, kind: 'paid', plan: check.plan, amount: PLANS[check.plan].value });
     return NextResponse.json({ ok: true, plan: check.plan, expiresAt: check.expiresAt, trial: check.trial });
   } catch (error) {
     if (error instanceof AppleApiError) console.error('[apple/verify]', error.message);

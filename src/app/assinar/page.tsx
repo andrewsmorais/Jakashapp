@@ -1,5 +1,6 @@
 "use client";
 
+import { signOutEverywhereOnDevice } from "@/lib/logout";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -33,7 +34,7 @@ export default function AssinarPage() {
   }, [ready, userId, check, supabase, router]);
 
   async function signOut() {
-    await supabase.auth.signOut();
+    await signOutEverywhereOnDevice(supabase);
     router.replace("/login");
   }
 

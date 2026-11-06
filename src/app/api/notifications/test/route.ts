@@ -18,6 +18,8 @@ export async function POST(req: Request) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return fail('Faça login para testar.', 401);
+  // Só manda para e-mail confirmado: ninguém usa uma conta com o e-mail de outra pessoa para disparar mensagens a ela.
+  if (!user.email || !user.email_confirmed_at) return fail('Confirme o seu e-mail antes de testar.', 403);
 
   const key = `${user.id}:${channel}`;
   const now = Date.now();

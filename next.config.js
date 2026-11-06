@@ -1,13 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  images: {
-    formats: ['image/avif', 'image/webp'],
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**',
-      },
-    ],
-  },
+  // O app não usa next/image: sem otimizador, /_next/image não vira proxy de imagens de qualquer site (custo na Vercel).
+  images: { unoptimized: true },
 }
 module.exports = nextConfig

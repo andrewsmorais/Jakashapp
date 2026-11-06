@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { appleBundleId, appleIapConfigured, billingEventFor, decodeTransaction, fetchAppleSubscriptionStatuses, profilePatchFromStatuses } from '@/lib/appleIap';
+import { appleBundleId, appleIapConfigured, billingEventFor, decodeTransaction, fetchAppleSubscriptionStatuses, profilePatchFromStatuses, sandboxAllowedFor } from '@/lib/appleIap';
 import { recordAppleBillingEvent } from '@/lib/billingProfile';
 import { decodeJwsPayload } from '@/lib/jwtEs256';
 import { planFromAppleProduct } from '@/lib/plans';
@@ -49,6 +49,13 @@ export async function POST(request: Request) {
     const result = profilePatchFromStatuses(statuses, originalId);
     if (!result) return NextResponse.json({ ok: true });
 
+    // Só mexe na conta que fez a compra: a transação traz o id da conta Jakash (appAccountToken). Se o mesmo Apple ID
+    // assinou depois por outra conta, a renovação é dessa outra conta, que recupera o vínculo ao abrir o app (/api/apple/verify).
+    if (String(result.tx.appAccountToken ?? '').toLowerCase() !== String(profile.id).toLowerCase()) return NextResponse.json({ ok: true });
+    // Renovação de teste (sandbox) só vale para as contas liberadas.
+    const sandbox = payload.data?.environment === 'Sandbox';
+    if (sandbox && !sandboxAllowedFor(profile.id)) return NextResponse.json({ ok: true });
+
     const { error } = await admin.from('profiles').update(result.patch).eq('id', profile.id);
     if (error) {
       console.error('[apple/notifications] gravar perfil', error.message);
@@ -57,7 +64,7 @@ export async function POST(request: Request) {
 
     const plan = planFromAppleProduct(result.tx.productId);
     const ev = billingEventFor(result.status, plan, result.patch.subscription_status === 'trial');
-    if (ev && result.tx.transactionId) await recordAppleBillingEvent(admin, { userId: profile.id, transactionId: result.tx.transactionId, kind: ev.kind, plan, amount: ev.amount });
+    if (ev && result.tx.transactionId && !sandbox) await recordAppleBillingEvent(admin, { userId: profile.id, transactionId: result.tx.transactionId, kind: ev.kind, plan, amount: ev.amount });
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error('[apple/notifications] erro', (error as Error).message);

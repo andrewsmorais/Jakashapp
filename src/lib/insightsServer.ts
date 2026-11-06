@@ -2,6 +2,7 @@
 // o resultado fica em monthly_insights (chave usuário + mês) e nunca é gerado de novo.
 import OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { isLiveStatus } from '@/lib/entitlements';
 import { aiPrompt, buildInsightItems, computeMonthStats, parseAiTips, prevMonthOf, type CatMini, type InsightItem } from '@/lib/insights';
 
 export const MIN_TX = 8; // com menos lançamentos no mês o resumo não diz nada
@@ -14,10 +15,9 @@ const pad = (n: number) => String(n).padStart(2, '0');
 /** Mês analisado (AAAA-MM) para uma data "AAAA-MM-DD": o mês anterior. */
 export const insightMonthFor = (today: string) => prevMonthOf(today.slice(0, 7));
 
+// Mesma regra de acesso do resto do app (src/lib/entitlements.ts): trial só no prazo; active/past_due até 3 dias depois.
 export function planAllows(p: { subscription_status: string | null; subscription_expires_at: string | null } | null | undefined, now = Date.now()): boolean {
-  if (!p || !ELIGIBLE_STATUS.includes(String(p.subscription_status))) return false;
-  if (p.subscription_status === 'trial' && p.subscription_expires_at && new Date(p.subscription_expires_at).getTime() < now) return false;
-  return true;
+  return Boolean(p && isLiveStatus(p.subscription_status, p.subscription_expires_at, now));
 }
 
 export async function getInsight(admin: SupabaseClient, userId: string, month: string): Promise<StoredInsight | null> {

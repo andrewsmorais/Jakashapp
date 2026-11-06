@@ -47,10 +47,24 @@ export async function removeOrphanReceipts(supabase: SupabaseClient, paths: (str
 }
 
 /** Apaga todos os comprovantes da pessoa (usado em "recomeçar do zero"). */
+// A foto de perfil e as fotos dos veículos ficam na mesma pasta e são preservadas.
 export async function removeAllReceipts(supabase: SupabaseClient, userId: string): Promise<void> {
-  for (let i = 0; i < 20; i++) {
-    const { data } = await supabase.storage.from(BUCKET).list(userId, { limit: 100 });
-    if (!data?.length) return;
-    await supabase.storage.from(BUCKET).remove(data.map((o) => `${userId}/${o.name}`));
+  const [p, v] = await Promise.all([
+    supabase.from("profiles").select("avatar_path").eq("id", userId).maybeSingle(),
+    supabase.from("driver_vehicles").select("photo_path").eq("user_id", userId),
+  ]);
+  if (p.error || v.error) throw new Error("Não foi possível conferir as fotos antes de apagar.");
+  const keep = new Set<string>([
+    (p.data as { avatar_path: string | null } | null)?.avatar_path ?? "",
+    ...((v.data ?? []) as { photo_path: string | null }[]).map((x) => x.photo_path ?? ""),
+  ].filter(Boolean));
+  const names: string[] = [];
+  for (let offset = 0; offset < 20_000; offset += 100) {
+    const { data } = await supabase.storage.from(BUCKET).list(userId, { limit: 100, offset });
+    if (!data?.length) break;
+    names.push(...data.map((o) => `${userId}/${o.name}`));
+    if (data.length < 100) break;
   }
+  const gone = names.filter((n) => !keep.has(n));
+  for (let i = 0; i < gone.length; i += 100) await supabase.storage.from(BUCKET).remove(gone.slice(i, i + 100));
 }

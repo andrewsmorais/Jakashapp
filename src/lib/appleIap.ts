@@ -41,6 +41,20 @@ export type AppleTransaction = {
   offerDiscountType?: string;
 };
 
+/**
+ * Compras do ambiente de TESTE da Apple (Sandbox: TestFlight, Xcode e a Revisão da App Store) não custam nada.
+ * Em produção, só liberam o app para:
+ *  - contas listadas em APPLE_SANDBOX_USER_IDS (ids do Jakash separados por vírgula: a conta demo da Revisão e os testers), ou
+ *  - todo mundo, enquanto APPLE_ALLOW_SANDBOX=1 (ligue só durante a revisão/testes e desligue depois).
+ * Fora da produção da Vercel (preview, local), o sandbox é sempre aceito.
+ */
+export function sandboxAllowedFor(userId: string): boolean {
+  if (process.env.VERCEL_ENV !== 'production') return true;
+  if (process.env.APPLE_ALLOW_SANDBOX === '1') return true;
+  const list = (process.env.APPLE_SANDBOX_USER_IDS ?? '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean);
+  return list.includes(userId.toLowerCase());
+}
+
 /** A transação é o teste grátis (7 dias) da App Store. */
 export const isFreeTrial = (tx: AppleTransaction | null | undefined): boolean => tx?.offerDiscountType === 'FREE_TRIAL';
 

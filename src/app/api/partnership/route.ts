@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { memberLimit } from '@/lib/plans';
+import { getEntitlement, isEntitled } from '@/lib/entitlements';
 
 // Gestão compartilhada (casa de até 3 pessoas, conforme o plano de quem convida). O convite vale 48h e é aceito com um código de uso único.
 // Quem aceita passa a ver e editar os dados financeiros de toda a casa, e vice-versa (políticas RLS household_user_ids()).
@@ -116,6 +117,7 @@ export async function POST(request: Request) {
 
     // ---- criar convite ----
     if (body.action === 'invite') {
+      if (!isEntitled(await getEntitlement(admin, user.id))) return NextResponse.json({ error: 'Sua assinatura não está ativa.' }, { status: 402 });
       if (mine.some((r) => r.partner_id === user.id && r.status === 'accepted')) {
         return NextResponse.json({ error: 'Você já faz parte da gestão compartilhada de outra pessoa. Só quem criou a casa pode convidar.' }, { status: 409 });
       }

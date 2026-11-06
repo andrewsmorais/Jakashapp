@@ -1,5 +1,6 @@
 "use client";
 
+import { signOutEverywhereOnDevice } from "@/lib/logout";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BarChart3, Bell, ChevronRight, Database, Globe, LogOut, MessageCircle, Palette, Sparkles, Tag, User, type LucideIcon } from "lucide-react";
@@ -27,7 +28,7 @@ export default function ConfiguracoesPage() {
   const { native } = useIsNative();
 
   async function logout() {
-    await supabase.auth.signOut();
+    await signOutEverywhereOnDevice(supabase);
     router.replace("/login");
   }
 

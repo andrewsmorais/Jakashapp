@@ -4,7 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { CreditCard, FileUp, Paperclip, Plus, Trash2 } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
-import { brl, parseMoney, todayISO, formatDateBR, currentMonth, monthRange } from "@/lib/format";
+import { brl, parseMoney, todayISO, formatDateBR } from "@/lib/format";
+import { defaultCustom, periodFor, type Period, type PeriodPreset } from "@/lib/period";
+import { PeriodFilter } from "@/components/PeriodFilter";
 import { categoryOptions, type CatRow } from "@/lib/categories";
 import { loadCategoryState, visibleCats } from "@/lib/categoryVisibility";
 import { usePartnership } from "@/lib/usePartnership";
@@ -29,7 +31,9 @@ export default function TransacoesPage() {
   const [cardNames, setCardNames] = useState<Record<string, string>>({});
   const [delTx, setDelTx] = useState<Tx | null>(null);
   const [txs, setTxs] = useState<Tx[]>([]);
-  const [month, setMonth] = useState(currentMonth());
+  const [preset, setPreset] = useState<PeriodPreset>("mes");
+  const [custom, setCustom] = useState<Period>(defaultCustom());
+  const period = periodFor(preset, custom);
   const [filter, setFilter] = useState<"all" | "income" | "expense">("all");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,11 +42,10 @@ export default function TransacoesPage() {
   const [form, setForm] = useState({ description: "", amount: "", type: "expense" as "income" | "expense", date: todayISO(), category_id: "" });
 
   const load = useCallback(async () => {
-    const { start, end } = monthRange(month);
     const [c, t, k] = await Promise.all([
       loadCategoryState(supabase, userId),
       supabase.from("transactions").select("id,user_id,description,amount,type,date,category_id,card_id,installment_group,is_business,debit_card_id,attachment_path")
-        .gte("date", start).lt("date", end).order("date", { ascending: false }).limit(500),
+        .gte("date", period.from).lte("date", period.to).order("date", { ascending: false }).limit(2000),
       supabase.from("credit_cards").select("id,name"),
     ]);
     if (c.error || t.error) setError("Não foi possível carregar os dados.");
@@ -52,7 +55,7 @@ export default function TransacoesPage() {
     setCardNames(Object.fromEntries((k.data ?? []).map((x) => [x.id, x.name])));
     setTxs(((t.data ?? []) as Tx[]).map((x) => ({ ...x, amount: Number(x.amount) })));
     setLoading(false);
-  }, [supabase, month, userId]);
+  }, [supabase, period.from, period.to, userId]);
 
   useEffect(() => { if (ready && userId) load(); }, [ready, userId, load]);
   useEffect(() => {
@@ -110,10 +113,12 @@ export default function TransacoesPage() {
       <PageHeader title="Transações" subtitle="Tudo que você registrou"
         action={<Link href="/importar" className={btnGhostCls + " !py-2.5 !px-4 w-fit"}><FileUp size={14} /> Importar extrato</Link>} />
 
+      <Card className="mb-5 !p-4"><PeriodFilter preset={preset} onPreset={setPreset} custom={custom} onCustom={setCustom} period={period} /></Card>
+
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <Card><p className="text-xs font-bold text-gray-500">Receitas</p><p className="text-2xl font-bold text-emerald-500">{brl(income)}</p></Card>
         <Card><p className="text-xs font-bold text-gray-500">Despesas</p><p className="text-2xl font-bold text-red-500">{brl(expense)}</p></Card>
-        <Card><p className="text-xs font-bold text-gray-500">Saldo do mês</p><p className="text-2xl font-bold">{brl(income - expense)}</p></Card>
+        <Card><p className="text-xs font-bold text-gray-500">Saldo do período</p><p className="text-2xl font-bold">{brl(income - expense)}</p></Card>
       </div>
 
       <Card className="mb-6">
@@ -136,7 +141,6 @@ export default function TransacoesPage() {
       </Card>
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <input type="month" className={inputCls + " !w-auto"} value={month} onChange={(e) => setMonth(e.target.value)} />
         {(["all", "expense", "income"] as const).map((f) => (
           <button key={f} onClick={() => setFilter(f)} className={filter === f ? btnCls : btnGhostCls}>
             {f === "all" ? "Todas" : f === "expense" ? "Despesas" : "Receitas"}
@@ -159,7 +163,7 @@ export default function TransacoesPage() {
       </div>
 
       <Card>
-        {loading ? <Empty>Carregando...</Empty> : shown.length === 0 ? <Empty>Nenhuma transação neste período.</Empty> : (
+        {loading ? <Empty>Carregando...</Empty> : shown.length === 0 ? <Empty>Nenhum lançamento neste período.</Empty> : (
           <ul className="divide-y divide-gray-100 dark:divide-[#262626]">
             {shown.map((t) => (
               <li key={t.id} className="flex items-center justify-between gap-3 py-3">

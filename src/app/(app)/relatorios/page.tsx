@@ -4,26 +4,29 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Download } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
-import { brl, currentMonth, monthRange } from "@/lib/format";
+import { brl } from "@/lib/format";
+import { defaultCustom, periodFor, type Period, type PeriodPreset } from "@/lib/period";
+import { PeriodFilter } from "@/components/PeriodFilter";
 import { buildClassifier, CATEGORY_TIPS, type CatFlagRow } from "@/lib/essentials";
-import { PageHeader, Card, Progress, Empty, ErrorNote, inputCls, btnCls } from "@/components/ui/page";
+import { PageHeader, Card, Progress, Empty, ErrorNote, btnCls } from "@/components/ui/page";
 import { saveOrShareText } from "@/lib/nativeShare";
 
 type Row = { description: string; amount: number; type: "income" | "expense"; date: string; category: string; categoryId: string | null };
 
 export default function RelatoriosPage() {
   const { supabase, userId, ready } = useSupabase();
-  const [month, setMonth] = useState(currentMonth());
+  const [preset, setPreset] = useState<PeriodPreset>("mes");
+  const [custom, setCustom] = useState<Period>(defaultCustom());
+  const period = periodFor(preset, custom);
   const [rows, setRows] = useState<Row[]>([]);
   const [classifier, setClassifier] = useState(() => buildClassifier([], []));
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const { start, end } = monthRange(month);
     const [c, f, t] = await Promise.all([
       supabase.from("categories").select("id,name,parent_id"),
       supabase.from("category_flags").select("category_id,is_essential,is_benefit"),
-      supabase.from("transactions").select("description,amount,type,date,category_id").gte("date", start).lt("date", end).order("date"),
+      supabase.from("transactions").select("description,amount,type,date,category_id").gte("date", period.from).lte("date", period.to).order("date").limit(5000),
     ]);
     if (c.error || t.error) { setError("Não foi possível carregar o relatório."); return; }
     setError(null);
@@ -31,7 +34,7 @@ export default function RelatoriosPage() {
     const byId = new Map((c.data ?? []).map((x) => [x.id, x]));
     const names = new Map((c.data ?? []).map((x) => [x.id, byId.get(x.parent_id ?? "")?.name ?? x.name]));
     setRows((t.data ?? []).map((x) => ({ description: x.description, amount: Number(x.amount), type: x.type, date: x.date, category: names.get(x.category_id) ?? "Sem categoria", categoryId: x.category_id })));
-  }, [supabase, month]);
+  }, [supabase, period.from, period.to]);
 
   useEffect(() => { if (ready && userId) load(); }, [ready, userId, load]);
   useEffect(() => {
@@ -57,17 +60,15 @@ export default function RelatoriosPage() {
   function exportCsv() {
     const esc = (v: string) => `"${v.replace(/"/g, '""').replace(/^([=+\-@])/, "'$1")}"`;
     const lines = ["Data;Descrição;Categoria;Tipo;Valor", ...rows.map((r) => [r.date, esc(r.description), esc(r.category), r.type === "income" ? "Receita" : "Despesa", r.amount.toFixed(2).replace(".", ",")].join(";"))];
-    void saveOrShareText(`jakash-${month}.csv`, "﻿" + lines.join("\n")); // no app iOS abre a folha de compartilhar
+    void saveOrShareText(`jakash-${period.from}_a_${period.to}.csv`, "﻿" + lines.join("\n")); // no app iOS abre a folha de compartilhar
   }
 
   return (
     <div className="max-w-4xl mx-auto pb-20">
-      <PageHeader title="Relatórios" subtitle="Resumo do mês por categoria" action={
-        <div className="flex gap-3">
-          <input type="month" className={inputCls + " !w-auto"} value={month} onChange={(e) => setMonth(e.target.value)} />
-          <button onClick={exportCsv} className={btnCls} disabled={rows.length === 0}><Download size={16} /> CSV</button>
-        </div>
+      <PageHeader title="Relatórios" subtitle="Receitas, despesas e resultado do período, por categoria" action={
+        <button onClick={exportCsv} className={btnCls + " w-fit"} disabled={rows.length === 0}><Download size={16} /> CSV</button>
       } />
+      <Card className="mb-5 !p-4"><PeriodFilter preset={preset} onPreset={setPreset} custom={custom} onCustom={setCustom} period={period} /></Card>
       <ErrorNote message={error} />
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <Card><p className="text-xs font-bold text-gray-500">Receitas</p><p className="text-2xl font-bold text-emerald-500">{brl(income)}</p></Card>
@@ -98,7 +99,7 @@ export default function RelatoriosPage() {
       )}
       <Card>
         <p className="font-extrabold mb-4">Despesas por categoria</p>
-        {byCat.length === 0 ? <Empty>Sem despesas neste mês.</Empty> : (
+        {byCat.length === 0 ? <Empty>Sem despesas neste período.</Empty> : (
           <div className="space-y-4">
             {byCat.map(([name, v]) => (
               <div key={name}>

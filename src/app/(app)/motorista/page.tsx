@@ -2,30 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSupabase } from "@/lib/useSupabase";
-import { brl, formatDateBR, todayISO } from "@/lib/format";
+import { brl, formatDateBR } from "@/lib/format";
 import { MAINT_COLUMNS, SHIFT_COLUMNS, VEHICLE_COLUMNS, normalizeMaintenance, normalizeShift, normalizeVehicle, shiftMetrics, type Maintenance, type Shift, type Vehicle } from "@/lib/driver";
 import { platformOf } from "@/lib/driverPlatforms";
 import { ShiftForm, type LastUsed } from "@/components/driver/ShiftForm";
-import { ResultsPanel, type Period } from "@/components/driver/ResultsPanel";
+import { ResultsPanel } from "@/components/driver/ResultsPanel";
+import { PeriodFilter } from "@/components/PeriodFilter";
+import { defaultCustom, periodFor, type Period, type PeriodPreset } from "@/lib/period";
 import { VehiclesPanel } from "@/components/driver/VehiclesPanel";
 import { TurnosPanel } from "@/components/driver/TurnosPanel";
 import { MaintenancePanel } from "@/components/driver/MaintenancePanel";
 import { BackTitle, Card, Empty, ErrorNote, Label, btnCls, btnGhostCls, inputCls } from "@/components/ui/page";
 
 type Tab = "turnos" | "resultados" | "mecanica" | "carros";
-type Preset = "hoje" | "semana" | "mes" | "custom";
-
-const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-function periodFor(p: Preset, custom: Period): Period {
-  const today = todayISO();
-  const [y, m, d] = today.split("-").map(Number);
-  if (p === "hoje") return { from: today, to: today };
-  // Semana: de segunda-feira até hoje.
-  if (p === "semana") { const dow = (new Date(y, m - 1, d).getDay() + 6) % 7; return { from: iso(new Date(y, m - 1, d - dow)), to: today }; }
-  if (p === "mes") return { from: `${today.slice(0, 7)}-01`, to: today };
-  return custom.from <= custom.to ? custom : { from: custom.to, to: custom.from };
-}
-
 type Acc = { id: string; name: string };
 
 export default function MotoristaPage() {
@@ -45,8 +34,8 @@ export default function MotoristaPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [setupNeeded, setSetupNeeded] = useState(false);
-  const [preset, setPreset] = useState<Preset>("mes");
-  const [custom, setCustom] = useState<Period>({ from: `${todayISO().slice(0, 7)}-01`, to: todayISO() });
+  const [preset, setPreset] = useState<PeriodPreset>("mes");
+  const [custom, setCustom] = useState<Period>(defaultCustom());
   const [platform, setPlatform] = useState<string | null>(null);
   const [vehicleId, setVehicleId] = useState("");
   const [editing, setEditing] = useState<Shift | null>(null);
@@ -154,24 +143,13 @@ export default function MotoristaPage() {
           {(tab === "resultados" || tab === "mecanica") && (
             <>
               <Card className="mb-4 !p-4 space-y-3">
-                <div className="flex gap-2 overflow-x-auto -mx-1 px-1">
-                  {([["hoje", "Hoje"], ["semana", "Esta semana"], ["mes", "Este mês"], ["custom", "Escolher datas"]] as const).map(([k, l]) => (
-                    <button key={k} type="button" onClick={() => setPreset(k)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ${preset === k ? "bg-brand-dark text-white dark:bg-brand-vivid" : "bg-white/70 dark:bg-[#1E1E1E] text-gray-500"}`}>{l}</button>
-                  ))}
-                </div>
-                {preset === "custom" && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div><Label>De</Label><input type="date" className={inputCls} value={custom.from} onChange={(e) => setCustom({ ...custom, from: e.target.value })} /></div>
-                    <div><Label>Até</Label><input type="date" className={inputCls} value={custom.to} onChange={(e) => setCustom({ ...custom, to: e.target.value })} /></div>
-                  </div>
-                )}
+                <PeriodFilter preset={preset} onPreset={setPreset} custom={custom} onCustom={setCustom} period={period} />
                 {vehicles.length > 1 && (
                   <select className={inputCls} value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} aria-label="Carro">
                     <option value="">Todos os carros</option>
                     {vehicles.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
                   </select>
                 )}
-                <p className="text-xs text-gray-400">{formatDateBR(period.from)} a {formatDateBR(period.to)}</p>
               </Card>
               {tab === "resultados" ? (
                 <ResultsPanel shifts={shifts} maintenance={maint} vehicles={vehicles} period={period} platform={platform} vehicleId={vehicleId} onPlatform={setPlatform}

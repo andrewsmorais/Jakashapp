@@ -6,6 +6,8 @@ import { useSupabase } from "@/lib/useSupabase";
 import { useUsageType } from "@/lib/useUsageType";
 import { useMeiSuppliers } from "@/lib/useMeiSuppliers";
 import { brl, parseMoney, todayISO, formatDateBR, daysUntil } from "@/lib/format";
+import { defaultCustom, periodFor, type Period, type PeriodPreset } from "@/lib/period";
+import { PeriodFilter } from "@/components/PeriodFilter";
 import { PageHeader, Card, Label, Empty, ErrorNote, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
 import { SupplierSelect } from "@/components/mei/SupplierSelect";
 
@@ -16,6 +18,10 @@ export default function ContasPage() {
   const { isMei } = useUsageType();
   const { active: suppliers, byId: supplierById } = useMeiSuppliers(supabase, userId, isMei);
   const [bills, setBills] = useState<Bill[]>([]);
+  // Por vencimento. Padrão: todas as pendentes.
+  const [preset, setPreset] = useState<PeriodPreset>("tudo");
+  const [custom, setCustom] = useState<Period>(defaultCustom());
+  const period = periodFor(preset, custom);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ description: "", amount: "", due_date: todayISO(), type: "expense" as "income" | "expense", recurrence: "none" as "none" | "monthly", biz: false, supplier_id: "" });
 
@@ -32,6 +38,8 @@ export default function ContasPage() {
     window.addEventListener("jakash:changed", h);
     return () => window.removeEventListener("jakash:changed", h);
   }, [load]);
+
+  const shownBills = bills.filter((b) => b.due_date >= period.from && b.due_date <= period.to);
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -98,10 +106,12 @@ export default function ContasPage() {
         <ErrorNote message={error} />
       </Card>
 
+      <Card className="mb-4 !p-4"><PeriodFilter preset={preset} onPreset={setPreset} custom={custom} onCustom={setCustom} period={period} withAll /></Card>
+
       <Card>
-        {bills.length === 0 ? <Empty>Nenhuma conta pendente.</Empty> : (
+        {shownBills.length === 0 ? <Empty>{bills.length === 0 ? "Nenhuma conta pendente." : "Nenhuma conta vence neste período."}</Empty> : (
           <ul className="divide-y divide-gray-100 dark:divide-[#262626]">
-            {bills.map((b) => {
+            {shownBills.map((b) => {
               const d = daysUntil(b.due_date);
               const label = d < 0 ? `Vencida há ${-d} dia(s)` : d === 0 ? "Vence hoje" : `Vence em ${d} dia(s)`;
               const supplier = b.supplier_id ? supplierById.get(b.supplier_id)?.name : undefined;

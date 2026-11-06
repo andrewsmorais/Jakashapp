@@ -58,9 +58,9 @@ export default function PlanosPage() {
     <div className="max-w-xl mx-auto pb-20">
       <BackTitle title="Planos e assinatura" subtitle="Seu plano e a sua assinatura." href="/configuracoes" />
 
-      {showPlansTab && <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#161616] mb-5">
+      {showPlansTab && <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl glass-track mb-5">
         {([["sub", "Assinatura"], ["plans", "Planos"]] as const).map(([k, l]) => (
-          <button key={k} onClick={() => setTab(k)} className={`py-2.5 rounded-xl text-sm font-bold ${tab === k ? "bg-white dark:bg-[#262626] shadow-sm" : "text-gray-500"}`}>{l}</button>
+          <button key={k} onClick={() => setTab(k)} className={`py-2.5 rounded-xl text-sm font-bold ${tab === k ? "glass-pill" : "text-gray-500"}`}>{l}</button>
         ))}
       </div>}
 

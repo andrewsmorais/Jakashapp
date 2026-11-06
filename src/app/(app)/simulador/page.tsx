@@ -26,10 +26,10 @@ const ymLabel = (ym: string) => monthLabel(ym).toLowerCase();
 
 function Seg<T extends string>({ value, onChange, options, label }: { value: T; onChange: (v: T) => void; options: [T, string][]; label: string }) {
   return (
-    <div className={`grid gap-1 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#161616]`} style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }} role="tablist" aria-label={label}>
+    <div className={`grid gap-1 p-1 rounded-2xl glass-track`} style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }} role="tablist" aria-label={label}>
       {options.map(([k, l]) => (
         <button key={k} type="button" role="tab" aria-selected={value === k} onClick={() => onChange(k)}
-          className={`py-2.5 px-1 rounded-xl text-xs sm:text-sm font-bold ${value === k ? "bg-white dark:bg-[#262626] shadow-sm" : "text-gray-500"}`}>{l}</button>
+          className={`py-2.5 px-1 rounded-xl text-xs sm:text-sm font-bold ${value === k ? "glass-pill" : "text-gray-500"}`}>{l}</button>
       ))}
     </div>
   );

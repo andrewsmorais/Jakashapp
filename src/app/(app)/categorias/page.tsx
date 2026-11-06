@@ -170,9 +170,9 @@ export default function CategoriasPage() {
 
       <button onClick={() => setEditing({ name: "", parent_id: "", color: SWATCHES[6] })} className={btnCls + " w-full mb-4"}><Plus size={18} /> Adicionar categoria</button>
 
-      <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#161616] mb-4">
+      <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl glass-track mb-4">
         {([["expense", "Despesas"], ["income", "Receitas"]] as const).map(([k, l]) => (
-          <button key={k} onClick={() => setTab(k)} className={`py-2.5 rounded-xl text-sm font-bold ${tab === k ? "bg-white dark:bg-[#262626] shadow-sm" : "text-gray-500"}`}>{l}</button>
+          <button key={k} onClick={() => setTab(k)} className={`py-2.5 rounded-xl text-sm font-bold ${tab === k ? "glass-pill" : "text-gray-500"}`}>{l}</button>
         ))}
       </div>
 

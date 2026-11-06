@@ -80,7 +80,7 @@ export default function FaleConoscoPage() {
           <>
             {messages.length === 0 && (
               <div className="flex gap-2 flex-wrap mb-3">
-                {SUGGESTIONS.map((s) => <button key={s} onClick={() => send(s)} className="rounded-full border border-white/70 dark:border-white/5 bg-white/60 dark:bg-[#161616] px-3 py-1.5 text-xs font-bold text-gray-600 dark:text-gray-300">{s}</button>)}
+                {SUGGESTIONS.map((s) => <button key={s} onClick={() => send(s)} className="rounded-full glass-btn border px-3 py-1.5 text-xs font-bold text-gray-600 dark:text-gray-300">{s}</button>)}
               </div>
             )}
             <div className="space-y-2 mb-3" aria-live="polite">

@@ -107,7 +107,7 @@ export function MaintenancePanel({ supabase, userId, vehicles, items, vehicleId,
               <div className="flex gap-1.5 mb-1.5">
                 {([["Hoje", 0], ["Ontem", 1]] as const).map(([l, n]) => {
                   const v = isoDaysAgo(n);
-                  return <button key={l} type="button" onClick={() => setForm({ ...form, date: v })} className={`rounded-full px-3 py-1 text-xs font-bold ${form.date === v ? "bg-brand-dark text-white dark:bg-brand-vivid" : "bg-gray-100 dark:bg-[#1E1E1E] text-gray-500"}`}>{l}</button>;
+                  return <button key={l} type="button" onClick={() => setForm({ ...form, date: v })} className={`rounded-full px-3 py-1 text-xs font-bold ${form.date === v ? "glass-shine bg-brand-dark text-white dark:bg-brand-vivid" : "glass-btn border text-gray-500"}`}>{l}</button>;
                 })}
               </div>
               <input type="date" className={inputCls} value={form.date} max={todayISO()} onChange={(e) => setForm({ ...form, date: e.target.value })} />

@@ -121,9 +121,9 @@ export default function MotoristaPage() {
 
       {setupNeeded ? <Card><Empty>Esta área fica disponível depois da próxima atualização do app.</Empty></Card> : (
         <>
-          <div className="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#161616] mb-4">
+          <div className="grid grid-cols-4 gap-1 p-1 rounded-2xl glass-track mb-4">
             {([["turnos", "Turnos"], ["resultados", "Relatórios"], ["mecanica", "Mecânica"], ["carros", "Veículos"]] as const).map(([k, l]) => (
-              <button key={k} onClick={() => { setTab(k); setSaved(null); setNewVehicle(0); if (k !== "turnos") { setFormOpen(false); setEditing(null); } }} className={`py-2.5 rounded-xl text-xs sm:text-sm font-bold ${tab === k ? "bg-white dark:bg-[#262626] shadow-sm" : "text-gray-500"}`}>{l}</button>
+              <button key={k} onClick={() => { setTab(k); setSaved(null); setNewVehicle(0); if (k !== "turnos") { setFormOpen(false); setEditing(null); } }} className={`py-2.5 rounded-xl text-xs sm:text-sm font-bold ${tab === k ? "glass-pill" : "text-gray-500"}`}>{l}</button>
             ))}
           </div>
 
@@ -153,9 +153,9 @@ export default function MotoristaPage() {
                 )}
               </Card>
               {tab === "resultados" && (
-                <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#161616] mb-4" role="tablist" aria-label="O que consultar">
+                <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl glass-track mb-4" role="tablist" aria-label="O que consultar">
                   {([["turnos", "Turnos e lucro"], ["mecanica", "Mecânica feita"]] as const).map(([k, l]) => (
-                    <button key={k} type="button" role="tab" aria-selected={view === k} onClick={() => setView(k)} className={`py-2 rounded-xl text-xs sm:text-sm font-bold ${view === k ? "bg-white dark:bg-[#262626] shadow-sm" : "text-gray-500"}`}>{l}</button>
+                    <button key={k} type="button" role="tab" aria-selected={view === k} onClick={() => setView(k)} className={`py-2 rounded-xl text-xs sm:text-sm font-bold ${view === k ? "glass-pill" : "text-gray-500"}`}>{l}</button>
                   ))}
                 </div>
               )}

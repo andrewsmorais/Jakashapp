@@ -242,10 +242,10 @@ export default function ImportarPage() {
           <div className="space-y-4">
             <div>
               <Label>Onde importar</Label>
-              <div className="flex items-center gap-1 rounded-full bg-brand-dark/10 dark:bg-[#161616] p-1 w-fit mb-3">
+              <div className="flex items-center gap-1 rounded-full glass-track p-1 w-fit mb-3">
                 {([["account", "Conta bancária"], ["card", "Cartão de crédito"]] as const).map(([k, l]) => (
                   <button key={k} type="button" onClick={() => pickKind(k)} disabled={(k === "account" ? accounts : cards).length === 0}
-                    className={`px-4 py-1.5 rounded-full text-xs font-bold disabled:opacity-40 ${targetKind === k ? "bg-white dark:bg-[#262626] shadow-sm" : "text-gray-500"}`}>{l}</button>
+                    className={`px-4 py-1.5 rounded-full text-xs font-bold disabled:opacity-40 ${targetKind === k ? "glass-pill" : "text-gray-500"}`}>{l}</button>
                 ))}
               </div>
               <select className={inputCls} value={targetId} onChange={(e) => setTargetId(e.target.value)} aria-label="Conta ou cartão de destino">

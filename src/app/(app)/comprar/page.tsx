@@ -374,9 +374,9 @@ export default function SupermercadoPage() {
       <BackTitle title="Supermercado" subtitle="Planeje a compra, marque no mercado, confira a nota e compare." />
 
       {isMei && (
-        <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#161616] mb-4" role="group" aria-label="Qual lista">
+        <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl glass-track mb-4" role="group" aria-label="Qual lista">
           {([["pessoal", "Minha lista"], ["empresa", "Lista da empresa"]] as const).map(([k, l]) => (
-            <button key={k} onClick={() => { setScope(k); setLoading(true); setItems([]); setReceipt(null); }} className={`py-2.5 rounded-xl text-sm font-bold ${scope === k ? "bg-white dark:bg-[#262626] shadow-sm" : "text-gray-500"}`}>{l}</button>
+            <button key={k} onClick={() => { setScope(k); setLoading(true); setItems([]); setReceipt(null); }} className={`py-2.5 rounded-xl text-sm font-bold ${scope === k ? "glass-pill" : "text-gray-500"}`}>{l}</button>
           ))}
         </div>
       )}
@@ -392,9 +392,9 @@ export default function SupermercadoPage() {
         <p className="mb-3 flex items-center gap-2 text-xs font-bold text-amber-600 dark:text-amber-400"><CloudOff size={14} /> Sem sinal por enquanto. {waiting} alteração(ões) serão salvas assim que voltar.</p>
       )}
 
-      <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#161616] mb-4" role="tablist" aria-label="Supermercado">
+      <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl glass-track mb-4" role="tablist" aria-label="Supermercado">
         {([["comprar", "Minhas listas"], ["relatorio", "Relatório"]] as const).map(([k, l]) => (
-          <button key={k} type="button" role="tab" aria-selected={view === k} onClick={() => setView(k)} className={`py-2.5 rounded-xl text-sm font-bold ${view === k ? "bg-white dark:bg-[#262626] shadow-sm" : "text-gray-500"}`}>{l}</button>
+          <button key={k} type="button" role="tab" aria-selected={view === k} onClick={() => setView(k)} className={`py-2.5 rounded-xl text-sm font-bold ${view === k ? "glass-pill" : "text-gray-500"}`}>{l}</button>
         ))}
       </div>
 
@@ -438,7 +438,7 @@ export default function SupermercadoPage() {
       <nav className="grid grid-cols-4 gap-1.5 mb-5" aria-label="Etapas da compra">
         {STEPS.map(([n, l]) => (
           <button key={n} onClick={() => setStep(n)} aria-current={step === n ? "step" : undefined}
-            className={`rounded-2xl py-2 text-center ${step === n ? "bg-brand-dark text-white dark:bg-brand-vivid" : step > n ? "bg-brand-dark/10 dark:bg-[#262626] text-brand-dark dark:text-brand-soft" : "bg-gray-100 dark:bg-[#161616] text-gray-400"}`}>
+            className={`rounded-2xl py-2 text-center ${step === n ? "glass-shine bg-brand-dark text-white dark:bg-brand-vivid" : step > n ? "glass-btn border text-brand-dark dark:text-brand-soft" : "glass-btn border text-gray-400"}`}>
             <span className="block text-base font-extrabold leading-none">{n}</span>
             <span className="block text-[11px] font-bold mt-1">{l}</span>
           </button>
@@ -454,7 +454,7 @@ export default function SupermercadoPage() {
           {suggestions.length > 0 && (
             <div className="flex gap-2 flex-wrap mb-4" aria-label="Sugestões">
               {suggestions.map((s) => (
-                <button key={s} onClick={() => addName(s)} className="rounded-full border border-white/70 dark:border-white/5 bg-white/60 dark:bg-[#161616] px-3 py-1.5 text-xs font-bold text-gray-600 dark:text-gray-300">+ {s}</button>
+                <button key={s} onClick={() => addName(s)} className="rounded-full glass-btn border px-3 py-1.5 text-xs font-bold text-gray-600 dark:text-gray-300">+ {s}</button>
               ))}
             </div>
           )}

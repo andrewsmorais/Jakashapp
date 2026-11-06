@@ -130,7 +130,7 @@ export function VehiclesPanel({ supabase, userId, vehicles, onChanged, startNew 
               <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Tipo de veículo">
                 {(Object.keys(VEHICLE_KINDS) as VehicleKind[]).map((k) => (
                   <button key={k} type="button" role="radio" aria-checked={form.kind === k} onClick={() => setForm({ ...form, kind: k })}
-                    className={`rounded-full px-3.5 py-2 text-sm font-bold ${form.kind === k ? "bg-brand-dark text-white dark:bg-brand-vivid" : "bg-gray-100 dark:bg-[#1E1E1E] text-gray-500"}`}>{VEHICLE_KINDS[k]}</button>
+                    className={`rounded-full px-3.5 py-2 text-sm font-bold ${form.kind === k ? "glass-shine bg-brand-dark text-white dark:bg-brand-vivid" : "glass-btn border text-gray-500"}`}>{VEHICLE_KINDS[k]}</button>
                 ))}
               </div>
             </div>

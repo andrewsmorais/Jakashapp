@@ -147,16 +147,16 @@ export default function TransacoesPage() {
           </button>
         ))}
         {showScope && (
-          <div className="flex items-center gap-1 rounded-full bg-brand-dark/10 dark:bg-[#161616] p-1">
+          <div className="flex items-center gap-1 rounded-full glass-track p-1">
             {([["all", "PF e PJ"], ["pf", "Pessoal"], ["pj", "Empresa"]] as const).map(([k, l]) => (
-              <button key={k} onClick={() => setScope(k)} className={`px-3 py-1.5 rounded-full text-xs font-bold ${scope === k ? "bg-white dark:bg-[#262626] shadow-sm" : "text-gray-500"}`}>{l}</button>
+              <button key={k} onClick={() => setScope(k)} className={`px-3 py-1.5 rounded-full text-xs font-bold ${scope === k ? "glass-pill" : "text-gray-500"}`}>{l}</button>
             ))}
           </div>
         )}
         {shared && (
-          <div className="flex items-center gap-1 rounded-full bg-brand-dark/10 dark:bg-[#161616] p-1">
+          <div className="flex items-center gap-1 rounded-full glass-track p-1">
             {([["all", others.length > 1 ? "Todos" : "Os dois"], ["me", "Você"], ...others.map((o) => [o.id, o.name.split(" ")[0]] as [string, string])] as [string, string][]).map(([k, l]) => (
-              <button key={k} onClick={() => setWho(k)} className={`px-3 py-1.5 rounded-full text-xs font-bold ${who === k ? "bg-white dark:bg-[#262626] shadow-sm" : "text-gray-500"}`}>{l}</button>
+              <button key={k} onClick={() => setWho(k)} className={`px-3 py-1.5 rounded-full text-xs font-bold ${who === k ? "glass-pill" : "text-gray-500"}`}>{l}</button>
             ))}
           </div>
         )}

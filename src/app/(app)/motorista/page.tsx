@@ -165,7 +165,7 @@ export default function MotoristaPage() {
                 <ResultsPanel shifts={shifts} maintenance={maint} vehicles={vehicles} period={period} platform={platform} vehicleId={vehicleId} onPlatform={setPlatform}
                   onEdit={openEdit} onDelete={remove} onLaunch={setLaunching} error={error} />
               ) : (
-                <MaintenancePanel supabase={supabase} userId={userId!} vehicles={vehicles} items={maint} vehicleId={vehicleId} onChanged={loadMaint} />
+                <MaintenancePanel supabase={supabase} userId={userId!} vehicles={vehicles} items={maint} vehicleId={vehicleId} onChanged={loadMaint} onAddVehicle={addVehicle} />
               )}
             </>
           )}

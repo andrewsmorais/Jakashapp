@@ -12,8 +12,10 @@ const str = (n: number) => (n ? String(n).replace(".", ",") : "");
 const isoDaysAgo = (n: number) => { const v = new Date(Date.now() - n * 86_400_000); return `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, "0")}-${String(v.getDate()).padStart(2, "0")}`; };
 
 // Gastos com mecânica do veículo: oficina, peça e mão de obra. Entram nas despesas dos Relatórios do mesmo período.
-export function MaintenancePanel({ supabase, userId, vehicles, items, vehicleId, onChanged, reportOnly = false }: {
+export function MaintenancePanel({ supabase, userId, vehicles, items, vehicleId, onChanged, onAddVehicle, reportOnly = false }: {
   supabase: unknown; userId: string; vehicles: Vehicle[]; items: Maintenance[]; vehicleId: string; onChanged: () => void;
+  /** Leva para a aba Veículos, para cadastrar um veículo novo. */
+  onAddVehicle?: () => void;
   /** Dentro dos Relatórios: só consulta (sem formulário, editar, excluir ou lançar). */
   reportOnly?: boolean;
 }) {
@@ -76,8 +78,6 @@ export function MaintenancePanel({ supabase, userId, vehicles, items, vehicleId,
     onChanged();
   }
 
-  if (!reportOnly && active.length === 0 && !items.length) return <Card><Empty>Cadastre um veículo na aba Veículos para registrar gastos com mecânica.</Empty></Card>;
-
   return (
     <div className="space-y-4">
       <Card className="!p-4 !bg-red-50 dark:!bg-red-500/10">
@@ -94,12 +94,14 @@ export function MaintenancePanel({ supabase, userId, vehicles, items, vehicleId,
       {reportOnly ? null : editing ? (
         <Card>
           <form onSubmit={save} className="space-y-3">
-            <h2 className="text-lg font-extrabold">{editing === "new" ? "Novo gasto com mecânica" : "Editar gasto"}</h2>
+            <h2 className="text-lg font-extrabold">{editing === "new" ? "Nova manutenção" : "Editar gasto"}</h2>
             <div><Label>Veículo *</Label>
               <select className={inputCls} value={form.vehicle_id} onChange={(e) => setForm({ ...form, vehicle_id: e.target.value })}>
-                <option value="">Selecionar veículo</option>
+                <option value="">{active.length ? "Selecionar veículo" : "Nenhum veículo cadastrado"}</option>
                 {active.map((v) => <option key={v.id} value={v.id}>{VEHICLE_KINDS[v.kind]} · {v.name}{v.plate ? ` · ${plateLabel(v.plate)}` : ""}</option>)}
-              </select></div>
+              </select>
+              {onAddVehicle && <button type="button" onClick={onAddVehicle} className="mt-1.5 inline-flex items-center gap-1 text-xs font-bold text-brand-dark dark:text-brand-soft"><Plus size={12} /> {active.length ? "Cadastrar outro veículo" : "Cadastrar meu veículo"}</button>}
+            </div>
             <div><Label>Nome da mecânica</Label><input className={inputCls} value={form.shop} onChange={(e) => setForm({ ...form, shop: e.target.value })} placeholder="Ex.: Auto Center do Zé" maxLength={80} /></div>
             <div>
               <Label>Data *</Label>
@@ -122,12 +124,12 @@ export function MaintenancePanel({ supabase, userId, vehicles, items, vehicleId,
             <ErrorNote message={error} />
             <div className="flex gap-2">
               <button type="button" className={btnGhostCls + " flex-1 !py-3"} onClick={() => { setEditing(null); setError(null); }}>Cancelar</button>
-              <button className={btnCls + " flex-1"} disabled={busy}>{busy ? "Salvando..." : "Salvar gasto"}</button>
+              <button className={btnCls + " flex-1"} disabled={busy}>{busy ? "Salvando..." : "Salvar manutenção"}</button>
             </div>
           </form>
         </Card>
       ) : (
-        <button className={btnCls + " w-full"} onClick={() => open(null)}><Plus size={16} /> Registrar gasto com mecânica</button>
+        <button className={btnCls + " w-full"} onClick={() => open(null)}><Plus size={16} /> Adicionar manutenção</button>
       )}
 
       {!editing && <ErrorNote message={error} />}

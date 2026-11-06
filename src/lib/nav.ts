@@ -1,6 +1,6 @@
 // Fonte única da navegação: o menu lateral, a tela "Tudo" (/menu) e as abas das telas usam esta lista.
 import {
-  Home, Send, ShoppingCart, CalendarClock, Landmark, Wallet, PiggyBank, Gauge, FileText, Sparkles, Settings, Car, type LucideIcon,
+  Home, Send, ShoppingCart, CalendarClock, Landmark, Wallet, PiggyBank, Gauge, FileText, Sparkles, Settings, Car, Calculator, type LucideIcon,
 } from "lucide-react";
 
 export type NavItem = {
@@ -21,8 +21,6 @@ export const TAB_GROUPS = {
     { label: "Objetivos", href: "/metas" },
     { label: "Reserva", href: "/reserva" },
     { label: "Investimentos", href: "/investimentos" },
-    { label: "Simulador", href: "/simulador" },
-    { label: "Viagem", href: "/viagem" },
   ],
   contas: [
     { label: "Contas bancárias", href: "/contas-bancarias" },
@@ -71,6 +69,7 @@ export const NAV_GROUPS: NavGroup[] = [
 
 // Rodapé: sempre visível, fora dos grupos.
 export const NAV_FOOTER: NavItem[] = [
+  { icon: Calculator, label: "Simulador", href: "/simulador", match: ["/simulador", "/viagem"] },
   { icon: Sparkles, label: "Chat da Jaki", href: "/chat", match: ["/chat"] },
   { icon: Settings, label: "Configurações", href: "/configuracoes", match: ["/configuracoes", "/categorias"] },
 ];

@@ -65,8 +65,25 @@ Não se cadastra nada: as compras parceladas no cartão aparecem sozinhas, com p
 - Objetivos: escolha o tipo (Viagem, Reserva de emergência, Carro, Casamento etc.), Nome, Valor-alvo, Já guardado, Data-alvo e "Criar objetivo". Com data, mostra "Guarde R$ X por mês". Em cada objetivo, "Novo aporte" e "Aportar" (anota quanto a pessoa separou; o app não move o dinheiro). No começo do mês pode aparecer "Sobrou R$ X" com o botão "Guardar".
 - Reserva: calcula a meta com a média dos gastos essenciais dos últimos 3 meses e "Meses de cobertura" (3 a 12); botão "Transformar em objetivo".
 - Investimentos: "Adicionar investimento" (Nome, Tipo, Instituição, Quanto aplicou, Valor atual). Em cada um: Aporte, Resgate, Atualizar valor, Histórico, Editar, Arquivar. Aporte e Resgate só ANOTAM o que a pessoa fez na corretora ou no banco; o app não aplica nem resgata de verdade. O registro é manual; o app não busca cotações nem conecta a corretoras.
-- Simulador: "Quanto vou ter" (valor inicial, aporte por mês, rendimento ao ano, prazo) e "Quanto guardar por mês" (valor que quer juntar e prazo).
-- Viagem: destino, data de ida, dias, pessoas, custos e quanto já guardou; mostra custo estimado, quanto guardar por mês e botão "Criar objetivo da viagem". Não consulta preço de passagem nem hotel.
+- Simulador e Viagem saíram de Guardar: agora ficam em Ferramentas > Simulador (veja abaixo).
+
+## Simulador (menu Ferramentas, acima do Chat da Jaki)
+Só faz contas com o que a pessoa digita; não guarda nem paga nada.
+- No topo, "Uma ordem que costuma funcionar": 1) quitar dívidas com juros altos, 2) reserva de emergência, 3) objetivos. Se a pessoa tem dívidas com juros cadastradas, mostra a mais cara.
+- Aba "Guardar dinheiro", com três perguntas:
+  - "Em quanto tempo?": informe quanto custa o objetivo e quanto consegue guardar por mês. Ex.: R$ 5.000 guardando R$ 200 por mês = 25 meses.
+  - "Quanto guardar?": informe o valor e o mês em que quer chegar ("Quero chegar até"); mostra quanto guardar por mês.
+  - "Quanto vou ter?": informe quanto guarda por mês e até quando; mostra o total.
+  - "Somar item por item": lista de itens do objetivo (ex.: bebê: pré-natal, parto, enxoval, quarto) com os valores em branco para a pessoa preencher, mais folga para imprevistos.
+  - "Já tenho guardado" e "Rendimento do dinheiro guardado (opcional)", em % ao mês ou ao ano.
+  - Avisa se o valor por mês cabe na sobra média dos últimos 3 meses. Botão "Criar objetivo com esses números" cria em Guardar > Objetivos.
+  - Para viagem há o link do simulador de viagem detalhado (dias, pessoas, parcelar no cartão).
+- Aba "Adiantar parcelas" (financiamento de carro, empréstimo, parcelado com juros):
+  - Preencha "Valor da parcela", "Parcelas que faltam" e "Juros do contrato". Sem saber os juros, toque em "Não sei os juros" e informe o valor financiado e o total de parcelas: o app calcula a taxa.
+  - Dá para puxar a taxa de uma dívida cadastrada.
+  - "Como quer adiantar": número de parcelas, um valor que tem, ou quitar tudo. Mostra quanto paga hoje, a economia de juros, quantas parcelas continuam e quando o contrato termina. Adianta sempre as ÚLTIMAS parcelas, que têm mais juros.
+  - "Adiantar ou guardar o dinheiro?": informe quanto o dinheiro guardado rende e o app compara as duas escolhas.
+  - É estimativa (tabela Price): o valor exato para antecipar é o que o banco informar. O adiantamento é feito pela pessoa com o banco.
 
 ## Orçamento do mês
 - Limites: navegue por mês; "Adicionar" ou o lápis em "Gastos planejados" (limite geral); escolha a Categoria (ou "Limite geral do mês") e o Limite mensal. Barra de "Atenção" a partir de 80% e "Limite estourado" a partir de 100%. Vale para todos os meses até mudar.

@@ -10,7 +10,6 @@ import { brl, monthRange, parseMoney, shiftMonth, todayISO, monthLabel } from "@
 import { TRIP_CATEGORIES, planTrip, tripFit, tripInstallmentLoad, tripScenarios, type TripCategory } from "@/lib/trip";
 import { buildPlans, buildTimeline, type InstallmentRow } from "@/lib/installments";
 import { PageHeader, Card, Label, ErrorNote, Disclaimer, inputCls, btnCls } from "@/components/ui/page";
-import { SectionTabs } from "@/components/SectionTabs";
 
 const num = (v: string) => { const n = parseMoney(v); return Number.isFinite(n) && n > 0 ? n : 0; };
 
@@ -83,7 +82,7 @@ export default function ViagemPage() {
   return (
     <div className="max-w-4xl mx-auto pb-20">
       <PageHeader title="Simulador de viagem" subtitle="Monte uma estimativa, veja quanto guardar por mês e se cabe no seu bolso." />
-      <SectionTabs group="guardar" />
+      <Link href="/simulador" className="inline-block text-sm font-bold text-brand-dark dark:text-brand-soft">← Voltar ao Simulador</Link>
 
       <Card className="mb-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">

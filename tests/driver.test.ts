@@ -101,7 +101,7 @@ t("Plataformas: conhecidas, digitadas e selo neutro", () => {
 });
 
 t("Planilha: resumo com ganho bruto, despesas e lucro líquido no topo; sem fórmula", () => {
-  const csv = driverCsv([{ ...base, notes: "=HYPERLINK(\"x\")" }], [{ id: "v1", name: "Onix", fuel: "gasolina", efficiency: 12.5, fuel_price: 6, efficiency_alt: null, fuel_price_alt: null, cost_per_km: 0.1, daily_rent: 0, archived: false }], { from: "2026-10-01", to: "2026-10-31" });
+  const csv = driverCsv([{ ...base, notes: "=HYPERLINK(\"x\")" }], [{ id: "v1", name: "Onix", fuel: "gasolina", efficiency: 12.5, fuel_price: 6, efficiency_alt: null, fuel_price_alt: null, cost_per_km: 0.1, daily_rent: 0, archived: false, plate: null, photo_path: null }], { from: "2026-10-01", to: "2026-10-31" });
   assert.ok(csv.startsWith("﻿"));
   const lines = csv.split("\r\n");
   const idx = (s: string) => lines.findIndex((l) => l.startsWith(s));

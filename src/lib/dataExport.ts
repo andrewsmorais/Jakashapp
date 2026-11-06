@@ -376,7 +376,7 @@ const TASKS: Record<Exclude<TaskId, "profile">, TaskDef> = {
     table: "shopping_items", label: "itens das listas de compras",
     columns: "id,list_id,name,quantity,unit,est_price,checked,checked_at", order: [asc("list_id"), asc("position"), asc("id")],
   },
-  driver_vehicles: { table: "driver_vehicles", label: "carros", entity: true, columns: "id,user_id,name,fuel,efficiency,fuel_price,efficiency_alt,fuel_price_alt,cost_per_km,daily_rent,archived,created_at", order: [asc("created_at"), asc("id")] },
+  driver_vehicles: { table: "driver_vehicles", label: "carros", entity: true, columns: "id,user_id,name,plate,fuel,efficiency,fuel_price,efficiency_alt,fuel_price_alt,cost_per_km,daily_rent,archived,created_at", order: [asc("created_at"), asc("id")] },
   driver_shifts: { table: "driver_shifts", label: "dias de motorista", columns: "user_id," + SHIFT_COLUMNS, order: [desc("date"), asc("id")] },
   mei_clients: {
     table: "mei_clients", label: "clientes", entity: true,
@@ -921,7 +921,7 @@ export function buildDatasets(raw: Partial<Record<TaskId, TaskResult>>, plan: Pl
       };
     }));
     push("driver_vehicles", rowsOf("driver_vehicles").map((r) => ({
-      nome: str(r.name), combustivel: isFuel(r.fuel) ? FUELS[r.fuel].label : str(r.fuel), media: num(r.efficiency), preco_combustivel: money(r.fuel_price),
+      nome: str(r.name), placa: str(r.plate), combustivel: isFuel(r.fuel) ? FUELS[r.fuel].label : str(r.fuel), media: num(r.efficiency), preco_combustivel: money(r.fuel_price),
       media_etanol: r.efficiency_alt == null ? null : num(r.efficiency_alt), preco_etanol: r.fuel_price_alt == null ? null : money(r.fuel_price_alt),
       custo_por_km: money(r.cost_per_km), aluguel_dia: money(r.daily_rent), arquivado: bool(r.archived), criado_em: str(r.created_at),
     })));

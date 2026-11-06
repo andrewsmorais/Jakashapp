@@ -17,6 +17,7 @@ export type Vehicle = {
   /** Só carro flex: média e preço no etanol (efficiency/fuel_price ficam para a gasolina). */
   efficiency_alt: number | null; fuel_price_alt: number | null;
   cost_per_km: number; daily_rent: number; archived: boolean;
+  plate: string | null; photo_path: string | null;
 };
 
 /** Combustível usado no dia. Carro flex escolhe gasolina ou etanol; os outros usam o do cadastro. */
@@ -201,7 +202,7 @@ export function normalizeShift(r: Record<string, unknown>): Shift {
 }
 
 export const SHIFT_COLUMNS = "id,date,vehicle_id,start_time,end_time,break_minutes,km_start,km_end,km,fuel,efficiency,fuel_price,cost_per_km,rent,earnings,tips,tolls,parking,wash,food,other_cost,notes,income_tx_id,expense_tx_id";
-export const VEHICLE_COLUMNS = "id,name,fuel,efficiency,fuel_price,efficiency_alt,fuel_price_alt,cost_per_km,daily_rent,archived";
+export const VEHICLE_COLUMNS = "id,name,plate,photo_path,fuel,efficiency,fuel_price,efficiency_alt,fuel_price_alt,cost_per_km,daily_rent,archived";
 
 export function normalizeVehicle(r: Record<string, unknown>): Vehicle {
   return {
@@ -209,6 +210,7 @@ export function normalizeVehicle(r: Record<string, unknown>): Vehicle {
     efficiency: num(r.efficiency), fuel_price: num(r.fuel_price),
     efficiency_alt: r.efficiency_alt == null ? null : num(r.efficiency_alt), fuel_price_alt: r.fuel_price_alt == null ? null : num(r.fuel_price_alt),
     cost_per_km: num(r.cost_per_km), daily_rent: num(r.daily_rent), archived: Boolean(r.archived),
+    plate: typeof r.plate === "string" ? r.plate : null, photo_path: typeof r.photo_path === "string" ? r.photo_path : null,
   };
 }
 
@@ -265,3 +267,12 @@ export function turnoMissing(s: Shift): string[] {
   else if (ok.length !== s.earnings.length) miss.push("valor ganho e quantidade em cada fonte");
   return miss;
 }
+
+/** Placa no padrão antigo (ABC1234) ou Mercosul (ABC1D23), sem traço nem espaço. null se não for uma placa. */
+export function normalizePlate(input: string): string | null {
+  const p = input.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/.test(p) ? p : null;
+}
+
+/** "ABC1234" -> "ABC-1234"; Mercosul fica como está ("ABC1D23"). */
+export const plateLabel = (p: string): string => (/^[A-Z]{3}[0-9]{4}$/.test(p) ? `${p.slice(0, 3)}-${p.slice(3)}` : p);

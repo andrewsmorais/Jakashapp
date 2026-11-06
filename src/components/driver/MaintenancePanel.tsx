@@ -4,16 +4,18 @@ import { useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { CheckCircle2, Pencil, Plus, Send, Trash2, Wrench } from "lucide-react";
 import { brl, formatDateBR, parseMoney, todayISO } from "@/lib/format";
-import { maintenanceCost, maintenanceTotal, plateLabel, type Maintenance, type Vehicle } from "@/lib/driver";
+import { maintenanceCost, maintenanceTotal, VEHICLE_KINDS, plateLabel, type Maintenance, type Vehicle } from "@/lib/driver";
 import { Card, Empty, ErrorNote, Label, btnCls, btnGhostCls, inputCls } from "@/components/ui/page";
 
-const EMPTY = { date: todayISO(), vehicle_id: "", shop: "", part: "", part_cost: "", labor_cost: "" };
+const EMPTY = { date: todayISO(), vehicle_id: "", shop: "", part: "", part_cost: "", labor_cost: "", bought_at: "", km: "" };
 const str = (n: number) => (n ? String(n).replace(".", ",") : "");
 const isoDaysAgo = (n: number) => { const v = new Date(Date.now() - n * 86_400_000); return `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, "0")}-${String(v.getDate()).padStart(2, "0")}`; };
 
 // Gastos com mecânica do veículo: oficina, peça e mão de obra. Entram nas despesas dos Relatórios do mesmo período.
-export function MaintenancePanel({ supabase, userId, vehicles, items, vehicleId, onChanged }: {
+export function MaintenancePanel({ supabase, userId, vehicles, items, vehicleId, onChanged, reportOnly = false }: {
   supabase: unknown; userId: string; vehicles: Vehicle[]; items: Maintenance[]; vehicleId: string; onChanged: () => void;
+  /** Dentro dos Relatórios: só consulta (sem formulário, editar, excluir ou lançar). */
+  reportOnly?: boolean;
 }) {
   const db = supabase as SupabaseClient;
   const active = vehicles.filter((v) => !v.archived);
@@ -32,7 +34,7 @@ export function MaintenancePanel({ supabase, userId, vehicles, items, vehicleId,
   const formTotal = (Number.isNaN(partV) ? 0 : partV) + (Number.isNaN(laborV) ? 0 : laborV);
 
   function open(m: Maintenance | null) {
-    setForm(m ? { date: m.date, vehicle_id: m.vehicle_id ?? "", shop: m.shop ?? "", part: m.part, part_cost: str(m.part_cost), labor_cost: str(m.labor_cost) }
+    setForm(m ? { date: m.date, vehicle_id: m.vehicle_id ?? "", shop: m.shop ?? "", part: m.part, part_cost: str(m.part_cost), labor_cost: str(m.labor_cost), bought_at: m.bought_at ?? "", km: m.km != null ? str(m.km) : "" }
       : { ...EMPTY, date: todayISO(), vehicle_id: vehicleId || (active.length === 1 ? active[0].id : "") });
     setEditing(m ? m.id : "new"); setError(null);
   }
@@ -43,9 +45,11 @@ export function MaintenancePanel({ supabase, userId, vehicles, items, vehicleId,
     if (!form.part.trim()) { setError("Escreva a peça ou o serviço (ex.: troca de pneu)."); return; }
     if ([partV, laborV].some((n) => Number.isNaN(n) || n < 0)) { setError("Confira os valores."); return; }
     if (!(partV + laborV > 0)) { setError("Informe o valor da peça ou da mão de obra."); return; }
+    const kmV = form.km.trim() ? parseMoney(form.km) : null;
+    if (kmV !== null && (Number.isNaN(kmV) || kmV < 0)) { setError("Confira o km do veículo."); return; }
     if (form.date > todayISO()) { setError("A data não pode ser no futuro."); return; }
     setBusy(true);
-    const payload = { date: form.date, vehicle_id: form.vehicle_id, shop: form.shop.trim().slice(0, 80) || null, part: form.part.trim().slice(0, 120), part_cost: partV, labor_cost: laborV };
+    const payload = { date: form.date, vehicle_id: form.vehicle_id, shop: form.shop.trim().slice(0, 80) || null, part: form.part.trim().slice(0, 120), part_cost: partV, labor_cost: laborV, bought_at: form.bought_at.trim().slice(0, 80) || null, km: kmV };
     const res = editing === "new" ? await db.from("driver_maintenance").insert({ ...payload, user_id: userId }) : await db.from("driver_maintenance").update(payload).eq("id", editing as string);
     setBusy(false);
     if (res.error) { setError("Não foi possível salvar o gasto."); return; }
@@ -72,7 +76,7 @@ export function MaintenancePanel({ supabase, userId, vehicles, items, vehicleId,
     onChanged();
   }
 
-  if (active.length === 0 && !items.length) return <Card><Empty>Cadastre um veículo na aba Veículos para registrar gastos com mecânica.</Empty></Card>;
+  if (!reportOnly && active.length === 0 && !items.length) return <Card><Empty>Cadastre um veículo na aba Veículos para registrar gastos com mecânica.</Empty></Card>;
 
   return (
     <div className="space-y-4">
@@ -87,10 +91,16 @@ export function MaintenancePanel({ supabase, userId, vehicles, items, vehicleId,
         <p className="text-[11px] text-gray-500 mt-1">Entra nas despesas e no lucro líquido dos Relatórios.</p>
       </Card>
 
-      {editing ? (
+      {reportOnly ? null : editing ? (
         <Card>
           <form onSubmit={save} className="space-y-3">
             <h2 className="text-lg font-extrabold">{editing === "new" ? "Novo gasto com mecânica" : "Editar gasto"}</h2>
+            <div><Label>Veículo *</Label>
+              <select className={inputCls} value={form.vehicle_id} onChange={(e) => setForm({ ...form, vehicle_id: e.target.value })}>
+                <option value="">Selecionar veículo</option>
+                {active.map((v) => <option key={v.id} value={v.id}>{VEHICLE_KINDS[v.kind]} · {v.name}{v.plate ? ` · ${plateLabel(v.plate)}` : ""}</option>)}
+              </select></div>
+            <div><Label>Nome da mecânica</Label><input className={inputCls} value={form.shop} onChange={(e) => setForm({ ...form, shop: e.target.value })} placeholder="Ex.: Auto Center do Zé" maxLength={80} /></div>
             <div>
               <Label>Data *</Label>
               <div className="flex gap-1.5 mb-1.5">
@@ -101,17 +111,13 @@ export function MaintenancePanel({ supabase, userId, vehicles, items, vehicleId,
               </div>
               <input type="date" className={inputCls} value={form.date} max={todayISO()} onChange={(e) => setForm({ ...form, date: e.target.value })} />
             </div>
-            <div><Label>Veículo *</Label>
-              <select className={inputCls} value={form.vehicle_id} onChange={(e) => setForm({ ...form, vehicle_id: e.target.value })}>
-                <option value="">Escolher</option>
-                {active.map((v) => <option key={v.id} value={v.id}>{v.name}{v.plate ? ` · ${plateLabel(v.plate)}` : ""}</option>)}
-              </select></div>
-            <div><Label>Oficina</Label><input className={inputCls} value={form.shop} onChange={(e) => setForm({ ...form, shop: e.target.value })} placeholder="Ex.: Auto Center do Zé" maxLength={80} /></div>
-            <div><Label>Peça ou serviço *</Label><input className={inputCls} value={form.part} onChange={(e) => setForm({ ...form, part: e.target.value })} placeholder="Ex.: pneu dianteiro, pastilha de freio" maxLength={120} /></div>
+            <div><Label>Peça trocada ou serviço *</Label><input className={inputCls} value={form.part} onChange={(e) => setForm({ ...form, part: e.target.value })} placeholder="Ex.: pneu dianteiro, pastilha de freio" maxLength={120} /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Valor da peça (R$)</Label><input className={inputCls} inputMode="decimal" value={form.part_cost} onChange={(e) => setForm({ ...form, part_cost: e.target.value })} placeholder="0,00" /></div>
+              <div><Label>Preço da peça (R$)</Label><input className={inputCls} inputMode="decimal" value={form.part_cost} onChange={(e) => setForm({ ...form, part_cost: e.target.value })} placeholder="0,00" /></div>
               <div><Label>Mão de obra (opcional)</Label><input className={inputCls} inputMode="decimal" value={form.labor_cost} onChange={(e) => setForm({ ...form, labor_cost: e.target.value })} placeholder="0,00" /></div>
             </div>
+            <div><Label>Onde a peça foi comprada</Label><input className={inputCls} value={form.bought_at} onChange={(e) => setForm({ ...form, bought_at: e.target.value })} placeholder="Ex.: Loja do Marcão, Mercado Livre" maxLength={80} /></div>
+            <div><Label>Km do veículo na troca</Label><input className={inputCls} inputMode="decimal" value={form.km} onChange={(e) => setForm({ ...form, km: e.target.value })} placeholder="Ex.: 85000" /></div>
             <p className="text-sm font-extrabold">Total: {brl(formTotal)}</p>
             <ErrorNote message={error} />
             <div className="flex gap-2">
@@ -135,19 +141,20 @@ export function MaintenancePanel({ supabase, userId, vehicles, items, vehicleId,
                   <p className="font-extrabold truncate">{m.part}</p>
                   <p className="text-xs text-gray-500">{formatDateBR(m.date)} · {vName(m.vehicle_id)}{m.shop ? ` · ${m.shop}` : ""}</p>
                   <p className="text-xs text-gray-500">Peça {brl(m.part_cost)}{m.labor_cost > 0 ? ` · mão de obra ${brl(m.labor_cost)}` : ""}</p>
+                  {(m.bought_at || m.km != null) && <p className="text-xs text-gray-500">{m.bought_at ? `Comprada em ${m.bought_at}` : ""}{m.bought_at && m.km != null ? " · " : ""}{m.km != null ? `${m.km.toLocaleString("pt-BR")} km` : ""}</p>}
                 </div>
                 <div className="text-right shrink-0">
                   <p className="font-extrabold text-red-600 dark:text-red-400">{brl(maintenanceCost(m))}</p>
-                  <div className="flex gap-2 justify-end mt-1 text-gray-400">
+                  {!reportOnly && <div className="flex gap-2 justify-end mt-1 text-gray-400">
                     <button aria-label="Editar gasto" onClick={() => open(m)}><Pencil size={15} /></button>
                     <button aria-label="Excluir gasto" onClick={() => remove(m)}><Trash2 size={15} /></button>
-                  </div>
+                  </div>}
                 </div>
               </div>
-              <div className="flex justify-end mt-2">
+              {!reportOnly && <div className="flex justify-end mt-2">
                 {m.tx_id ? <span className="text-[11px] font-bold text-emerald-600 inline-flex items-center gap-1"><CheckCircle2 size={12} /> Lançado no financeiro</span>
                   : <button type="button" onClick={() => launch(m)} className="text-[11px] font-bold text-brand-dark dark:text-brand-soft inline-flex items-center gap-1"><Send size={12} /> Lançar no financeiro</button>}
-              </div>
+              </div>}
             </Card>
           ))}
         </div>

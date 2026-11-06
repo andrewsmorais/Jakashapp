@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Archive, Camera, Car, Pencil, Plus } from "lucide-react";
 import { brl } from "@/lib/format";
-import { FUELS, flexAdvice, normalizePlate, plateLabel, type Vehicle } from "@/lib/driver";
+import { FUELS, VEHICLE_KINDS, flexAdvice, normalizePlate, plateLabel, type Vehicle, type VehicleKind } from "@/lib/driver";
 import { uploadReceipt } from "@/lib/receipts";
 import { Card, Empty, ErrorNote, Label, btnCls, btnGhostCls, inputCls } from "@/components/ui/page";
 
 // A foto do carro fica no mesmo armazenamento privado dos comprovantes, na pasta do próprio usuário.
 const BUCKET = "receipts";
-const EMPTY = { name: "", plate: "" };
+const EMPTY: { name: string; plate: string; kind: VehicleKind } = { name: "", plate: "", kind: "carro" };
 const dec = (n: number) => String(n).replace(".", ",");
 
 /** Carro flex: diz qual combustível sai mais barato por km com os preços cadastrados (só carros antigos que têm esses dados). */
@@ -54,7 +54,7 @@ export function VehiclesPanel({ supabase, userId, vehicles, onChanged, startNew 
   }, [photo]);
 
   function open(v: Vehicle | null) {
-    setForm(v ? { name: v.name, plate: v.plate ? plateLabel(v.plate) : "" } : EMPTY);
+    setForm(v ? { name: v.name, plate: v.plate ? plateLabel(v.plate) : "", kind: v.kind } : EMPTY);
     setPhoto(null); setDropPhoto(false); setError(null);
     setEditing(v ? v.id : "new");
   }
@@ -64,14 +64,16 @@ export function VehiclesPanel({ supabase, userId, vehicles, onChanged, startNew 
     const name = form.name.trim();
     const plate = normalizePlate(form.plate);
     if (!name) { setError("Informe o nome do veículo (ex.: Onix prata)."); return; }
-    if (!plate) { setError("Informe a placa (ex.: ABC-1234 ou ABC1D23)."); return; }
+    const bike = form.kind === "bicicleta"; // bicicleta não tem placa
+    if (!bike && !plate) { setError("Informe a placa (ex.: ABC-1234 ou ABC1D23)."); return; }
+    if (bike && form.plate.trim() && !plate) { setError("A placa não parece certa. Deixe em branco se não tiver."); return; }
     setBusy(true);
     let photo_path: string | null | undefined; // undefined = não mexe na foto
     if (photo) {
       try { photo_path = (await uploadReceipt(db, userId, photo)).path; }
       catch (err) { setBusy(false); setError(err instanceof Error ? err.message.replace("comprovante", "foto") : "Não foi possível enviar a foto."); return; }
     } else if (dropPhoto) photo_path = null;
-    const payload = { name: name.slice(0, 60), plate, ...(photo_path !== undefined ? { photo_path } : {}) };
+    const payload = { name: name.slice(0, 60), kind: form.kind, plate: plate ?? null, ...(photo_path !== undefined ? { photo_path } : {}) };
     const res = editing === "new" ? await db.from("driver_vehicles").insert({ ...payload, user_id: userId }) : await db.from("driver_vehicles").update(payload).eq("id", editing as string);
     setBusy(false);
     if (res.error) {
@@ -104,6 +106,7 @@ export function VehiclesPanel({ supabase, userId, vehicles, onChanged, startNew 
               : <span className="w-14 h-14 rounded-2xl bg-brand-dark/10 dark:bg-white/5 inline-flex items-center justify-center text-brand-dark dark:text-brand-soft shrink-0"><Car size={22} /></span>}
             <div className="flex-1 min-w-0">
               <p className="font-extrabold truncate">{v.name}</p>
+              <p className="text-xs text-gray-500">{VEHICLE_KINDS[v.kind]}</p>
               {v.plate && <p className="inline-block mt-0.5 rounded-md border border-gray-300 dark:border-white/15 px-1.5 py-0.5 text-xs font-bold tracking-wider">{plateLabel(v.plate)}</p>}
               {v.efficiency > 0 && (v.fuel === "flex"
                 ? <p className="text-xs text-gray-500">Flex · gasolina {dec(v.efficiency)} km/l · etanol {dec(v.efficiency_alt ?? 0)} km/l</p>
@@ -121,7 +124,16 @@ export function VehiclesPanel({ supabase, userId, vehicles, onChanged, startNew 
           <form onSubmit={save} className="space-y-3">
             <h2 className="text-lg font-extrabold">{editing === "new" ? "Novo veículo" : "Editar veículo"}</h2>
             <div><Label>Nome do veículo *</Label><input className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex.: Onix prata" maxLength={60} /></div>
-            <div><Label>Placa *</Label><input className={inputCls + " uppercase tracking-wider"} value={form.plate} onChange={(e) => setForm({ ...form, plate: e.target.value.toUpperCase().slice(0, 8) })} placeholder="ABC-1234 ou ABC1D23" autoCapitalize="characters" /></div>
+            <div><Label>{form.kind === "bicicleta" ? "Placa (se tiver)" : "Placa *"}</Label><input className={inputCls + " uppercase tracking-wider"} value={form.plate} onChange={(e) => setForm({ ...form, plate: e.target.value.toUpperCase().slice(0, 8) })} placeholder="ABC-1234 ou ABC1D23" autoCapitalize="characters" /></div>
+            <div>
+              <Label>Tipo de veículo *</Label>
+              <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Tipo de veículo">
+                {(Object.keys(VEHICLE_KINDS) as VehicleKind[]).map((k) => (
+                  <button key={k} type="button" role="radio" aria-checked={form.kind === k} onClick={() => setForm({ ...form, kind: k })}
+                    className={`rounded-full px-3.5 py-2 text-sm font-bold ${form.kind === k ? "bg-brand-dark text-white dark:bg-brand-vivid" : "bg-gray-100 dark:bg-[#1E1E1E] text-gray-500"}`}>{VEHICLE_KINDS[k]}</button>
+                ))}
+              </div>
+            </div>
             <div>
               <Label>Foto do veículo (opcional)</Label>
               <div className="flex items-center gap-3">

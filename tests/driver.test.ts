@@ -101,7 +101,7 @@ t("Plataformas: conhecidas, digitadas e selo neutro", () => {
 });
 
 t("Planilha: resumo com ganho bruto, despesas e lucro líquido no topo; sem fórmula", () => {
-  const csv = driverCsv([{ ...base, notes: "=HYPERLINK(\"x\")" }], [{ id: "v1", name: "Onix", fuel: "gasolina", efficiency: 12.5, fuel_price: 6, efficiency_alt: null, fuel_price_alt: null, cost_per_km: 0.1, daily_rent: 0, archived: false, plate: null, photo_path: null }], { from: "2026-10-01", to: "2026-10-31" });
+  const csv = driverCsv([{ ...base, notes: "=HYPERLINK(\"x\")" }], [{ id: "v1", name: "Onix", fuel: "gasolina", efficiency: 12.5, fuel_price: 6, efficiency_alt: null, fuel_price_alt: null, cost_per_km: 0.1, daily_rent: 0, archived: false, plate: null, photo_path: null, kind: "carro" }], { from: "2026-10-01", to: "2026-10-31" });
   assert.ok(csv.startsWith("﻿"));
   const lines = csv.split("\r\n");
   const idx = (s: string) => lines.findIndex((l) => l.startsWith(s));
@@ -177,8 +177,8 @@ console.log("ok: pacote MEI por plano");
   if (m.expenses !== 250 || m.net !== 250 || m.netPerHour !== 25 || m.netPerKm !== 1.25) { console.error('FALHOU: withMaintenance', m); process.exitCode = 1; }
   if (withMaintenance(base, 0) !== base) { console.error('FALHOU: withMaintenance sem gasto'); process.exitCode = 1; }
   const list = [
-    { id: 'a', vehicle_id: 'v1', date: '2026-11-01', shop: null, part: 'Pneu', part_cost: 300, labor_cost: 40, tx_id: null },
-    { id: 'b', vehicle_id: 'v2', date: '2026-11-02', shop: 'Oficina', part: 'Freio', part_cost: 120.5, labor_cost: 0, tx_id: null },
+    { id: 'a', vehicle_id: 'v1', date: '2026-11-01', shop: null, part: 'Pneu', part_cost: 300, labor_cost: 40, tx_id: null, bought_at: null, km: null },
+    { id: 'b', vehicle_id: 'v2', date: '2026-11-02', shop: 'Oficina', part: 'Freio', part_cost: 120.5, labor_cost: 0, tx_id: null, bought_at: null, km: null },
   ];
   if (maintenanceTotal(list) !== 460.5 || maintenanceTotal(list, 'v1') !== 340) { console.error('FALHOU: maintenanceTotal'); process.exitCode = 1; }
   console.log('ok: mecânica');

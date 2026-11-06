@@ -12,12 +12,18 @@ export const FUELS = {
 export type FuelKind = keyof typeof FUELS;
 export const isFuel = (v: unknown): v is FuelKind => typeof v === "string" && Object.prototype.hasOwnProperty.call(FUELS, v);
 
+export const VEHICLE_KINDS = {
+  moto: "Moto", carro: "Carro", van: "Van", onibus: "Ônibus", caminhao: "Caminhão", bicicleta: "Bicicleta",
+} as const;
+export type VehicleKind = keyof typeof VEHICLE_KINDS;
+export const isVehicleKind = (v: unknown): v is VehicleKind => typeof v === "string" && Object.prototype.hasOwnProperty.call(VEHICLE_KINDS, v);
+
 export type Vehicle = {
   id: string; name: string; fuel: FuelKind; efficiency: number; fuel_price: number;
   /** Só carro flex: média e preço no etanol (efficiency/fuel_price ficam para a gasolina). */
   efficiency_alt: number | null; fuel_price_alt: number | null;
   cost_per_km: number; daily_rent: number; archived: boolean;
-  plate: string | null; photo_path: string | null;
+  plate: string | null; photo_path: string | null; kind: VehicleKind;
 };
 
 /** Combustível usado no dia. Carro flex escolhe gasolina ou etanol; os outros usam o do cadastro. */
@@ -202,7 +208,7 @@ export function normalizeShift(r: Record<string, unknown>): Shift {
 }
 
 export const SHIFT_COLUMNS = "id,date,vehicle_id,start_time,end_time,break_minutes,km_start,km_end,km,fuel,efficiency,fuel_price,cost_per_km,rent,earnings,tips,tolls,parking,wash,food,other_cost,notes,income_tx_id,expense_tx_id";
-export const VEHICLE_COLUMNS = "id,name,plate,photo_path,fuel,efficiency,fuel_price,efficiency_alt,fuel_price_alt,cost_per_km,daily_rent,archived";
+export const VEHICLE_COLUMNS = "id,name,kind,plate,photo_path,fuel,efficiency,fuel_price,efficiency_alt,fuel_price_alt,cost_per_km,daily_rent,archived";
 
 export function normalizeVehicle(r: Record<string, unknown>): Vehicle {
   return {
@@ -211,6 +217,7 @@ export function normalizeVehicle(r: Record<string, unknown>): Vehicle {
     efficiency_alt: r.efficiency_alt == null ? null : num(r.efficiency_alt), fuel_price_alt: r.fuel_price_alt == null ? null : num(r.fuel_price_alt),
     cost_per_km: num(r.cost_per_km), daily_rent: num(r.daily_rent), archived: Boolean(r.archived),
     plate: typeof r.plate === "string" ? r.plate : null, photo_path: typeof r.photo_path === "string" ? r.photo_path : null,
+    kind: isVehicleKind(r.kind) ? r.kind : "carro",
   };
 }
 
@@ -282,14 +289,17 @@ export const plateLabel = (p: string): string => (/^[A-Z]{3}[0-9]{4}$/.test(p) ?
 export type Maintenance = {
   id: string; vehicle_id: string | null; date: string; shop: string | null; part: string;
   part_cost: number; labor_cost: number; tx_id: string | null;
+  /** Onde a peça foi comprada (texto livre) e km do veículo quando foi trocada. */
+  bought_at: string | null; km: number | null;
 };
-export const MAINT_COLUMNS = "id,vehicle_id,date,shop,part,part_cost,labor_cost,tx_id";
+export const MAINT_COLUMNS = "id,vehicle_id,date,shop,part,part_cost,labor_cost,tx_id,bought_at,km";
 
 export function normalizeMaintenance(r: Record<string, unknown>): Maintenance {
   return {
     id: String(r.id), vehicle_id: (r.vehicle_id as string | null) ?? null, date: String(r.date),
     shop: typeof r.shop === "string" && r.shop.trim() ? r.shop : null, part: String(r.part ?? ""),
     part_cost: num(r.part_cost), labor_cost: num(r.labor_cost), tx_id: (r.tx_id as string | null) ?? null,
+    bought_at: typeof r.bought_at === "string" && r.bought_at.trim() ? r.bought_at : null, km: r.km == null ? null : num(r.km),
   };
 }
 

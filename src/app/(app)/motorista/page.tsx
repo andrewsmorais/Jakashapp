@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSupabase } from "@/lib/useSupabase";
 import { brl, formatDateBR } from "@/lib/format";
-import { MAINT_COLUMNS, SHIFT_COLUMNS, VEHICLE_COLUMNS, normalizeMaintenance, normalizeShift, normalizeVehicle, shiftMetrics, type Maintenance, type Shift, type Vehicle } from "@/lib/driver";
+import { MAINT_COLUMNS, SHIFT_COLUMNS, VEHICLE_COLUMNS, normalizeMaintenance, normalizeShift, normalizeVehicle, plateLabel, shiftMetrics, VEHICLE_KINDS, type Maintenance, type Shift, type Vehicle } from "@/lib/driver";
 import { platformOf } from "@/lib/driverPlatforms";
 import { ShiftForm, type LastUsed } from "@/components/driver/ShiftForm";
 import { ResultsPanel } from "@/components/driver/ResultsPanel";
@@ -36,6 +36,7 @@ export default function MotoristaPage() {
   const [setupNeeded, setSetupNeeded] = useState(false);
   const [preset, setPreset] = useState<PeriodPreset>("mes");
   const [custom, setCustom] = useState<Period>(defaultCustom());
+  const [view, setView] = useState<"turnos" | "mecanica">("turnos");
   const [platform, setPlatform] = useState<string | null>(null);
   const [vehicleId, setVehicleId] = useState("");
   const [editing, setEditing] = useState<Shift | null>(null);
@@ -144,14 +145,23 @@ export default function MotoristaPage() {
             <>
               <Card className="mb-4 !p-4 space-y-3">
                 <PeriodFilter preset={preset} onPreset={setPreset} custom={custom} onCustom={setCustom} period={period} />
-                {vehicles.length > 1 && (
-                  <select className={inputCls} value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} aria-label="Carro">
-                    <option value="">Todos os carros</option>
-                    {vehicles.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+                {(vehicles.length > 1 || tab === "resultados") && vehicles.length > 0 && (
+                  <select className={inputCls} value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} aria-label="Veículo">
+                    <option value="">Todos os veículos</option>
+                    {vehicles.map((v) => <option key={v.id} value={v.id}>{VEHICLE_KINDS[v.kind]} · {v.name}{v.plate ? ` · ${plateLabel(v.plate)}` : ""}</option>)}
                   </select>
                 )}
               </Card>
-              {tab === "resultados" ? (
+              {tab === "resultados" && (
+                <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#161616] mb-4" role="tablist" aria-label="O que consultar">
+                  {([["turnos", "Turnos e lucro"], ["mecanica", "Mecânica feita"]] as const).map(([k, l]) => (
+                    <button key={k} type="button" role="tab" aria-selected={view === k} onClick={() => setView(k)} className={`py-2 rounded-xl text-xs sm:text-sm font-bold ${view === k ? "bg-white dark:bg-[#262626] shadow-sm" : "text-gray-500"}`}>{l}</button>
+                  ))}
+                </div>
+              )}
+              {tab === "resultados" && view === "mecanica" ? (
+                <MaintenancePanel reportOnly supabase={supabase} userId={userId!} vehicles={vehicles} items={maint} vehicleId={vehicleId} onChanged={loadMaint} />
+              ) : tab === "resultados" ? (
                 <ResultsPanel shifts={shifts} maintenance={maint} vehicles={vehicles} period={period} platform={platform} vehicleId={vehicleId} onPlatform={setPlatform}
                   onEdit={openEdit} onDelete={remove} onLaunch={setLaunching} error={error} />
               ) : (

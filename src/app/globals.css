@@ -105,3 +105,52 @@ html[data-accent="slate"] {
     visibility: visible;
   }
 }
+
+/* Efeito de vidro (estilo "Liquid Glass" do iOS), só nas barras e nos botões do app.
+   Vidro = fundo translúcido + desfoque do que passa por trás + borda e brilho claros no topo. */
+@layer components {
+  .glass-bar {
+    background: rgba(255, 255, 255, 0.55);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 8px 32px rgba(17, 24, 39, 0.10);
+  }
+  .dark .glass-bar {
+    background: rgba(22, 22, 22, 0.55);
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 8px 32px rgba(0, 0, 0, 0.45);
+  }
+  /* Botão claro (secundário): vidro. */
+  .glass-btn {
+    background: rgba(255, 255, 255, 0.5) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(170%);
+    backdrop-filter: blur(16px) saturate(170%);
+    border-color: rgba(255, 255, 255, 0.7) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 2px 10px rgba(17, 24, 39, 0.06);
+  }
+  .dark .glass-btn {
+    background: rgba(38, 38, 38, 0.45) !important;
+    border-color: rgba(255, 255, 255, 0.10) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 2px 10px rgba(0, 0, 0, 0.35);
+  }
+  /* Botão colorido (principal): mantém a cor e ganha o brilho de vidro por cima. */
+  .glass-shine {
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -1px 0 rgba(0, 0, 0, 0.10), 0 8px 24px rgba(91, 91, 240, 0.25);
+  }
+  .glass-shine::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 50% 0;
+    border-radius: inherit;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0));
+    pointer-events: none;
+  }
+  /* Quem pediu menos transparência no iPhone (Acessibilidade) vê as barras sólidas. */
+  @media (prefers-reduced-transparency: reduce) {
+    .glass-bar, .glass-btn { -webkit-backdrop-filter: none; backdrop-filter: none; background: #fff !important; }
+    .dark .glass-bar, .dark .glass-btn { background: #161616 !important; }
+  }
+}

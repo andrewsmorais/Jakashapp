@@ -8,10 +8,10 @@ export const inputCls =
   "w-full rounded-2xl border border-white/70 dark:border-white/5 bg-white/70 dark:bg-[#1E1E1E] px-3.5 py-2.5 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:border-brand-dark focus:ring-2 focus:ring-brand-dark/20";
 
 export const btnCls =
-  "inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-dark to-brand-accent px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-brand-dark/30 dark:from-brand-vivid dark:to-brand-vivid dark:shadow-none hover:opacity-90 disabled:opacity-50 transition-opacity";
+  "glass-shine inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-dark to-brand-accent px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-brand-dark/30 dark:from-brand-vivid dark:to-brand-vivid dark:shadow-none hover:opacity-90 disabled:opacity-50 transition-opacity";
 
 export const btnGhostCls =
-  "inline-flex items-center justify-center gap-1 rounded-full border border-white/70 bg-white/60 dark:bg-transparent dark:border-white/5 px-3.5 py-2 text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#262626] transition-colors";
+  "glass-btn inline-flex items-center justify-center gap-1 rounded-full border border-white/70 bg-white/60 dark:bg-transparent dark:border-white/5 px-3.5 py-2 text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#262626] transition-colors";
 
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: React.ReactNode }) {
   return (

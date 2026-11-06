@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Sparkles, BarChart3, type LucideIcon } from "lucide-react";
+import { BarChart3, type LucideIcon } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { useIsAdmin } from "@/lib/useIsAdmin";
 import { useUsageType } from "@/lib/useUsageType";
@@ -21,7 +21,7 @@ export default function MenuPage() {
   const { isMei } = useUsageType();
   const isAdmin = useIsAdmin();
   const groups = groupsFor(isMei).map((g) => ({ title: g.title, tiles: g.items as Tile[] }));
-  const more: Tile[] = [...NAV_FOOTER, { icon: Sparkles, label: "Planos", href: "/configuracoes/planos" }, ...(isAdmin ? [{ icon: BarChart3, label: "Painel do dono", href: "/admin" }] : [])];
+  const more: Tile[] = [...NAV_FOOTER, ...(isAdmin ? [{ icon: BarChart3, label: "Painel do dono", href: "/admin" }] : [])];
   const sections = [...groups, { title: "MAIS", tiles: more }];
 
   useEffect(() => {

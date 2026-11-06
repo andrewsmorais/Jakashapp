@@ -44,7 +44,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { icon: Home, label: "Início", href: "/dashboard", match: ["/dashboard"] },
       { icon: Send, label: "Lançamentos", href: "/transacoes", match: ["/transacoes", "/importar"] },
-      { icon: ShoppingCart, label: "Comprar", href: "/comprar", match: ["/comprar"] },
+      { icon: ShoppingCart, label: "Supermercado", href: "/comprar", match: ["/comprar"] },
       { icon: CalendarClock, label: "Contas a pagar e receber", href: "/contas", match: ["/contas"] },
     ],
   },

@@ -44,7 +44,7 @@ export function HomeShortcuts() {
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
       {toBuy > 0 && (
         <Link href="/comprar" className="flex items-center justify-between rounded-2xl bg-white/75 dark:bg-[#161616] border border-white/80 dark:border-white/5 px-4 py-3">
-          <span className="flex items-center gap-3"><ShoppingCart size={20} className="text-brand-dark dark:text-brand-soft" /><span><span className="block font-extrabold text-sm">Lista de compras</span><span className="block text-xs text-gray-500">{toBuy} {toBuy === 1 ? "item falta" : "itens faltam"} comprar</span></span></span>
+          <span className="flex items-center gap-3"><ShoppingCart size={20} className="text-brand-dark dark:text-brand-soft" /><span><span className="block font-extrabold text-sm">Supermercado</span><span className="block text-xs text-gray-500">{toBuy} {toBuy === 1 ? "item falta" : "itens faltam"} comprar</span></span></span>
           <ChevronRight size={18} className="text-gray-300" />
         </Link>
       )}

@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import { Camera, Check, CloudOff, LoaderCircle, Mic, ShoppingCart, Square, Trash2, X } from "lucide-react";
+import { Camera, Check, ChevronRight, CloudOff, LoaderCircle, Mic, ShoppingCart, Square, Trash2, X } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { useCards } from "@/lib/useCards";
 import { useUsageType } from "@/lib/useUsageType";
@@ -22,7 +21,7 @@ type Op = { v: number; insert?: ShopItem; patch?: Partial<ShopItem>; del?: boole
 
 const RETRY_MS = 4000;
 
-export default function ComprarPage() {
+export default function SupermercadoPage() {
   const { supabase, userId, ready } = useSupabase();
   const { cards } = useCards();
   const { isMei } = useUsageType();
@@ -42,7 +41,8 @@ export default function ComprarPage() {
   const [foodSpent, setFoodSpent] = useState(0);
   const [finishing, setFinishing] = useState(false);
   const [done, setDone] = useState<string | null>(null);
-  const [shop, setShop] = useState(false); // false = planejando em casa; true = no mercado (marca o que pegou)
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1); // 1 planejar, 2 no mercado, 3 nota, 4 comparar
+  const shop = step === 2; // o que entra na lista no mercado ganha a etiqueta "fora da lista"
   const [goal, setGoal] = useState<number | null>(null);
   const [voiceMethod, setVoiceMethod] = useState<VoiceMethod>("none");
   const [listening, setListening] = useState(false);
@@ -225,8 +225,8 @@ export default function ComprarPage() {
   const suggestions = useMemo(() => suggestNames(history, items.map((i) => i.name)), [history, items]);
   const sorted = useMemo(() => [...items].sort((a, b) => Number(a.checked) - Number(b.checked) || a.position - b.position), [items]);
   const left = budgetLeft(foodLimit, foodSpent);
-  // Em casa a meta é comparada com o estimado; no mercado, com o que já foi para o carrinho.
-  const gs = goalStatus(goal, shop ? totals.cart : totals.estimated);
+  // No mercado a meta é comparada com o que já foi para o carrinho.
+  const gs = goalStatus(goal, totals.cart);
 
   // --- Finalizar a compra ---
   const [fin, setFin] = useState({ amount: "", description: "", category_id: "", pay: "", date: todayISO() });
@@ -286,18 +286,57 @@ export default function ComprarPage() {
     if (err) { setError("Não foi possível finalizar a compra. Tente de novo."); return; }
     const res = data as { transaction_id: string | null; leftover_list_id: string | null; already: boolean };
     setFinishing(false);
+    setReceipt(null);
+    setStep(1);
     setDone(res.already ? "Esta compra já tinha sido finalizada." : amount > 0 ? `Compra registrada: ${brl(amount)}.${res.leftover_list_id ? " O que faltou passou para a próxima lista." : ""}` : `Lista encerrada.${res.leftover_list_id ? " O que faltou passou para a próxima lista." : ""}`);
     window.dispatchEvent(new Event("jakash:changed"));
   }
 
+  // ---------- etapa 4: o que deu certo, o que faltou e o que entrou a mais ----------
+  const cmp = receipt ? compareReceipt(items, receipt.items) : null;
+  const receiptTotal = receipt ? parseMoney(receipt.total || "0") : NaN;
+  const spent = receipt && !Number.isNaN(receiptTotal) ? receiptTotal : totals.cart;
+  const bought: { name: string; price: number | null }[] = cmp
+    ? cmp.rows.filter((r) => r.match && !r.item.extra).map((r) => ({ name: r.item.name, price: r.match!.total }))
+    : items.filter((i) => i.checked && !i.extra).map((i) => ({ name: i.name, price: i.est_price != null ? itemTotal(i) : null }));
+  const missed: string[] = cmp
+    ? cmp.rows.filter((r) => !r.match && !r.item.extra).map((r) => r.item.name)
+    : items.filter((i) => !i.checked && !i.extra).map((i) => i.name);
+  const added: { name: string; price: number | null }[] = cmp
+    ? [...cmp.rows.filter((r) => r.match && r.item.extra).map((r) => ({ name: r.item.name, price: r.match!.total })), ...cmp.unlisted.map((r) => ({ name: r.name, price: r.total }))]
+    : items.filter((i) => i.checked && i.extra).map((i) => ({ name: i.name, price: i.est_price != null ? itemTotal(i) : null }));
+  const goalEnd = goalStatus(goal, spent);
+
+  const STEPS = [[1, "Planejar"], [2, "No mercado"], [3, "Nota"], [4, "Comparar"]] as const;
+  const nextBtn = (to: 1 | 2 | 3 | 4, label: string) => (
+    <button onClick={() => { setStep(to); window.scrollTo({ top: 0, behavior: "smooth" }); }} className={btnCls + " w-full mt-4"}>{label} <ChevronRight size={18} /></button>
+  );
+  const micBtn = voiceMethod !== "none" && (
+    <button type="button" onClick={toggleMic} aria-label={listening ? "Parar de ouvir" : "Falar os itens"} disabled={!list}
+      className={`w-11 h-11 shrink-0 self-center rounded-full flex items-center justify-center text-white ${listening ? "bg-red-500" : "bg-brand-dark dark:bg-brand-vivid"}`}>
+      {listening ? <Square size={16} /> : <Mic size={18} />}
+    </button>
+  );
+  const addForm = (placeholder: string) => (
+    <form onSubmit={add} className="flex gap-2 mb-3">
+      <input className={inputCls} value={listening && heard ? heard : text} onChange={(e) => setText(e.target.value)} placeholder={placeholder} aria-label="Adicionar itens" maxLength={400} />
+      {micBtn}
+      <button type="submit" className={btnCls + " shrink-0"} disabled={!text.trim() || !list}>Adicionar</button>
+    </form>
+  );
+  const Section = ({ title, tone, children }: { title: string; tone: string; children: React.ReactNode }) => (
+    <div className="mt-4"><p className={`text-xs font-extrabold mb-1 ${tone}`}>{title}</p>{children}</div>
+  );
+  const priceTxt = (p: number | null) => (p == null ? "" : money(brl(p)));
+
   return (
     <div className="max-w-2xl mx-auto pb-24">
-      <BackTitle title="Comprar" subtitle="Planeje o que comprar, some no mercado o que for pegando e lance o gasto." />
+      <BackTitle title="Supermercado" subtitle="Planeje a compra, marque no mercado, confira a nota e compare." />
 
       {isMei && (
         <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#161616] mb-4" role="group" aria-label="Qual lista">
           {([["pessoal", "Minha lista"], ["empresa", "Lista da empresa"]] as const).map(([k, l]) => (
-            <button key={k} onClick={() => { setScope(k); setLoading(true); setItems([]); }} className={`py-2.5 rounded-xl text-sm font-bold ${scope === k ? "bg-white dark:bg-[#262626] shadow-sm" : "text-gray-500"}`}>{l}</button>
+            <button key={k} onClick={() => { setScope(k); setLoading(true); setItems([]); setReceipt(null); }} className={`py-2.5 rounded-xl text-sm font-bold ${scope === k ? "bg-white dark:bg-[#262626] shadow-sm" : "text-gray-500"}`}>{l}</button>
           ))}
         </div>
       )}
@@ -313,179 +352,161 @@ export default function ComprarPage() {
         <p className="mb-3 flex items-center gap-2 text-xs font-bold text-amber-600 dark:text-amber-400"><CloudOff size={14} /> Sem sinal por enquanto. {waiting} alteração(ões) serão salvas assim que voltar.</p>
       )}
 
-      <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#161616] mb-4" role="group" aria-label="Etapa da compra">
-        {([[false, "Planejar a compra"], [true, "Estou no mercado"]] as const).map(([k, l]) => (
-          <button key={String(k)} onClick={() => setShop(k)} aria-pressed={shop === k} className={`py-2.5 rounded-xl text-sm font-bold ${shop === k ? "bg-white dark:bg-[#262626] shadow-sm" : "text-gray-500"}`}>{l}</button>
-        ))}
-      </div>
-
-      <div className="mb-4 flex items-center gap-3 rounded-2xl border border-white/70 dark:border-white/5 bg-white/60 dark:bg-[#161616] px-4 py-3">
-        <label htmlFor="meta" className="text-sm font-bold flex-1">Quanto quero gastar<span className="block text-xs font-normal text-gray-500">Sua meta para esta compra</span></label>
-        <input id="meta" key={goal ?? "none"} className="w-28 rounded-xl border border-white/70 dark:border-white/5 bg-white/70 dark:bg-[#1E1E1E] px-2.5 py-2 text-sm text-right" inputMode="decimal" placeholder="R$ 0,00"
-          defaultValue={goal != null ? String(goal).replace(".", ",") : ""}
-          onBlur={(e) => {
-            const raw = e.target.value.trim();
-            const v = raw === "" ? null : parseMoney(raw);
-            if (v !== null && (Number.isNaN(v) || v < 0)) return;
-            if (v !== goal) void saveGoal(v);
-          }} />
-      </div>
-
-      {left !== null ? (
-        <div className={`mb-4 rounded-2xl border px-4 py-3 text-sm ${left < 0 ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300" : totals.estimated > left && totals.estimated > 0 ? "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200" : "border-white/70 dark:border-white/5 bg-white/60 dark:bg-[#161616] text-gray-600 dark:text-gray-300"}`}>
-          {left < 0
-            ? <>Você já passou <strong>{money(brl(-left))}</strong> do limite de Alimentação deste mês.</>
-            : <>Você ainda pode gastar <strong>{money(brl(left))}</strong> em Alimentação este mês.{totals.estimated > left && <> A lista estimada ({money(brl(totals.estimated))}) passa disso.</>}</>}
-        </div>
-      ) : (
-        <p className="mb-4 text-xs text-gray-400">Defina um limite de Alimentação em <Link href="/limites" className="font-bold text-brand-dark dark:text-brand-soft">Orçamento do mês</Link> para ver aqui quanto ainda pode gastar.</p>
-      )}
-
-      <form onSubmit={add} className="flex gap-2 mb-3">
-        <input className={inputCls} value={listening && heard ? heard : text} onChange={(e) => setText(e.target.value)} placeholder={shop ? "Pegou algo que não estava na lista?" : "Ex.: 2 leite, pão, 1kg arroz"} aria-label="Adicionar itens à lista" maxLength={400} />
-        {voiceMethod !== "none" && (
-          <button type="button" onClick={toggleMic} aria-label={listening ? "Parar de ouvir" : "Falar os itens"} disabled={!list}
-            className={`w-11 h-11 shrink-0 self-center rounded-full flex items-center justify-center text-white ${listening ? "bg-red-500" : "bg-brand-dark dark:bg-brand-vivid"}`}>
-            {listening ? <Square size={16} /> : <Mic size={18} />}
+      <nav className="grid grid-cols-4 gap-1.5 mb-5" aria-label="Etapas da compra">
+        {STEPS.map(([n, l]) => (
+          <button key={n} onClick={() => setStep(n)} aria-current={step === n ? "step" : undefined}
+            className={`rounded-2xl py-2 text-center ${step === n ? "bg-brand-dark text-white dark:bg-brand-vivid" : step > n ? "bg-brand-dark/10 dark:bg-[#262626] text-brand-dark dark:text-brand-soft" : "bg-gray-100 dark:bg-[#161616] text-gray-400"}`}>
+            <span className="block text-base font-extrabold leading-none">{n}</span>
+            <span className="block text-[11px] font-bold mt-1">{l}</span>
           </button>
-        )}
-        <button type="submit" className={btnCls + " shrink-0"} disabled={!text.trim() || !list}>Adicionar</button>
-      </form>
-
-      {suggestions.length > 0 && (
-        <div className="flex gap-2 flex-wrap mb-4" aria-label="Sugestões">
-          {suggestions.map((s) => (
-            <button key={s} onClick={() => addName(s)} className="rounded-full border border-white/70 dark:border-white/5 bg-white/60 dark:bg-[#161616] px-3 py-1.5 text-xs font-bold text-gray-600 dark:text-gray-300">+ {s}</button>
-          ))}
-        </div>
-      )}
+        ))}
+      </nav>
 
       <ErrorNote message={error} />
 
-      <Card className="!p-2 md:!p-3 mt-2">
-        {loading ? <Empty>Carregando...</Empty> : sorted.length === 0 ? (
-          <Empty>Lista vazia. Escreva o que precisa comprar acima.</Empty>
-        ) : (
-          <ul>
-            {sorted.map((i) => (
-              <li key={i.id} className={`flex items-center gap-3 px-2 py-1.5 border-b last:border-b-0 border-gray-100 dark:border-white/5 border-l-4 rounded-l-lg ${shop ? (i.checked ? "border-l-blue-500 bg-blue-500/5" : "border-l-red-500 bg-red-500/5") : "border-l-transparent"}`}>
-                <button onClick={() => toggle(i)} aria-pressed={i.checked} aria-label={`${i.checked ? "Desmarcar" : "Marcar"} ${i.name}`}
-                  className={`w-11 h-11 shrink-0 rounded-full flex items-center justify-center border-2 transition-colors ${i.checked ? "bg-blue-500 border-blue-500 text-white" : "border-gray-300 dark:border-white/20 text-transparent"}`}>
-                  <Check size={20} />
-                </button>
-                <div className="min-w-0 flex-1">
-                  <p className={`font-bold truncate ${i.checked ? (shop ? "text-blue-600 dark:text-blue-400" : "line-through text-gray-400") : shop ? "text-red-600 dark:text-red-400" : ""}`}>{i.name}{i.extra && <span className="ml-2 rounded-full bg-amber-100 dark:bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300">fora da lista</span>}</p>
-                  {quantityLabel(i) && <p className="text-xs text-gray-500">{quantityLabel(i)}</p>}
-                </div>
-                <input
-                  key={`${i.id}-${i.est_price ?? ""}`}
-                  className="w-24 rounded-xl border border-white/70 dark:border-white/5 bg-white/70 dark:bg-[#1E1E1E] px-2.5 py-2 text-sm text-right"
-                  inputMode="decimal" placeholder={shop ? "Preço" : "R$"} aria-label={`Preço de ${i.name}`}
-                  defaultValue={i.est_price != null ? String(i.est_price).replace(".", ",") : ""}
-                  onBlur={(e) => {
-                    const raw = e.target.value.trim();
-                    const v = raw === "" ? null : parseMoney(raw);
-                    if (v !== null && (Number.isNaN(v) || v < 0)) return;
-                    if (v !== i.est_price) patch(i.id, { est_price: v });
-                  }}
-                />
-                <button onClick={() => remove(i.id)} aria-label={`Remover ${i.name}`} className="w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500"><Trash2 size={17} /></button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
-
-      <label className={`mt-4 flex items-center gap-3 rounded-2xl border-2 border-dashed border-brand-dark/30 dark:border-white/15 px-4 py-3 ${reading ? "opacity-60" : "cursor-pointer hover:bg-brand-dark/5 dark:hover:bg-[#1E1E1E]"}`}>
-        {reading ? <LoaderCircle size={20} className="animate-spin text-brand-dark dark:text-brand-soft shrink-0" /> : <Camera size={20} className="text-brand-dark dark:text-brand-soft shrink-0" />}
-        <span className="min-w-0">
-          <span className="block text-sm font-extrabold">{reading ? "Lendo a nota..." : "Já passou no caixa? Foto da nota fiscal"}</span>
-          <span className="block text-xs text-gray-500">Mostro o que foi comprado e comparo com a sua lista.</span>
-        </span>
-        <input type="file" accept="image/*" capture="environment" className="hidden" disabled={reading} onChange={(e) => { void readReceipt(e.target.files?.[0]); e.target.value = ""; }} />
-      </label>
-
-      {receipt && (() => {
-        const cmp = compareReceipt(items, receipt.items);
-        const rTotal = parseMoney(receipt.total || "0");
-        const finalTotal = Number.isNaN(rTotal) ? 0 : rTotal;
-        const diff = Math.round((finalTotal - totals.cart) * 100) / 100;
-        const goalFinal = goalStatus(goal, finalTotal);
-        return (
-          <Card className="mt-4 space-y-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0"><h2 className="text-lg font-extrabold">Nota fiscal{receipt.store ? ` · ${receipt.store}` : ""}</h2><p className="text-xs text-gray-500">Confira: a leitura por foto pode errar um valor.</p></div>
-              <button onClick={() => setReceipt(null)} aria-label="Fechar a nota" className="text-gray-400"><X size={20} /></button>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-2xl bg-gray-100 dark:bg-[#1E1E1E] p-2.5"><p className="text-[11px] font-bold text-gray-500">1. Planejado</p><p className="font-extrabold">{money(brl(totals.estimated))}</p>{goal != null && <p className="text-[10px] text-gray-500">meta {money(brl(goal))}</p>}</div>
-              <div className="rounded-2xl bg-blue-500/10 p-2.5"><p className="text-[11px] font-bold text-blue-600 dark:text-blue-400">2. Carrinho</p><p className="font-extrabold">{money(brl(totals.cart))}</p><p className="text-[10px] text-gray-500">{totals.checked}/{totals.total} itens</p></div>
-              <div className="rounded-2xl bg-emerald-500/10 p-2.5"><p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">3. No caixa</p><p className="font-extrabold">{money(brl(finalTotal))}</p><p className="text-[10px] text-gray-500">{receipt.items.length} produtos</p></div>
-            </div>
-            {totals.cart > 0 && <p className={`text-sm font-bold ${diff > 0 ? "text-red-600 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400"}`}>{diff === 0 ? "O caixa fechou igual ao seu carrinho." : diff > 0 ? `O caixa deu ${money(brl(diff))} a mais que o seu carrinho.` : `O caixa deu ${money(brl(-diff))} a menos que o seu carrinho.`}</p>}
-            {goalFinal && <p className={`text-sm font-bold ${goalFinal.over ? "text-red-600 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400"}`}>{goalFinal.over ? `Passou ${money(brl(-goalFinal.left))} da meta de ${money(brl(goal ?? 0))}.` : `Ficou ${money(brl(goalFinal.left))} abaixo da meta de ${money(brl(goal ?? 0))}.`}</p>}
-
-            <div>
-              <p className="text-xs font-bold text-gray-500 mb-1">4. Sua lista × a nota</p>
-              <ul className="divide-y divide-gray-100 dark:divide-white/5">
-                {cmp.rows.map(({ item, match }) => {
-                  const mine = itemTotal(item);
-                  return (
-                    <li key={item.id} className="flex items-center gap-2 py-2 text-sm">
-                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${match ? "bg-emerald-500" : "bg-red-500"}`} />
-                      <span className="min-w-0 flex-1 truncate font-bold">{item.name}{item.extra && <span className="ml-2 text-[10px] font-bold text-amber-700 dark:text-amber-300">fora da lista</span>}</span>
-                      {match ? (
-                        <span className="shrink-0 text-right text-xs">
-                          <span className="block font-bold">{money(brl(match.total))}</span>
-                          {mine > 0 && Math.abs(match.total - mine) >= 0.01 && <span className={`block ${match.total > mine ? "text-red-600 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400"}`}>você anotou {money(brl(mine))}</span>}
-                        </span>
-                      ) : <span className="shrink-0 text-xs text-red-600 dark:text-red-400 font-bold">não veio na nota</span>}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-
-            {cmp.unlisted.length > 0 && (
-              <div>
-                <p className="text-xs font-bold text-gray-500 mb-1">Saiu no caixa e não estava na sua lista</p>
-                <ul className="divide-y divide-gray-100 dark:divide-white/5">
-                  {cmp.unlisted.map((r, k) => (
-                    <li key={`${r.name}-${k}`} className="flex items-center gap-2 py-2 text-sm">
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-amber-500" />
-                      <span className="min-w-0 flex-1 truncate">{r.name}</span>
-                      <span className="shrink-0 font-bold text-xs">{money(brl(r.total))}</span>
-                      <button aria-label={`Tirar ${r.name} da nota`} onClick={() => setReceipt({ ...receipt, items: receipt.items.filter((x) => x !== r) })} className="text-gray-400 hover:text-red-500"><X size={15} /></button>
-                    </li>
-                  ))}
-                </ul>
-                <p className="text-[11px] text-gray-500 mt-1">Leu errado? Toque no X para tirar da comparação.</p>
-              </div>
-            )}
-
-            <div><Label>Total da nota</Label><input className={inputCls} inputMode="decimal" value={receipt.total} onChange={(e) => setReceipt({ ...receipt, total: e.target.value })} /></div>
-            <button onClick={() => openFinish(true)} className={btnCls + " w-full"}><ShoppingCart size={18} /> Lançar como despesa</button>
-          </Card>
-        );
-      })()}
-
-      {items.length > 0 && (
-        <div className="sticky bottom-20 md:bottom-4 mt-4 rounded-[28px] border border-white/80 dark:border-white/5 bg-white/90 dark:bg-[#161616] backdrop-blur-xl shadow-lg p-4">
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <div><p className="text-[11px] font-bold text-gray-500">Estimado</p><p className="text-lg font-extrabold">{money(brl(totals.estimated))}</p></div>
-            <div><p className="text-[11px] font-bold text-blue-600 dark:text-blue-400">No carrinho ({totals.checked}/{totals.total})</p><p className="text-lg font-extrabold">{money(brl(totals.cart))}</p></div>
-          </div>
-          {gs && (
-            <div className="mb-3" role="status">
-              <div className="h-2.5 w-full rounded-full bg-gray-200 dark:bg-[#262626] overflow-hidden"><div className={`h-full rounded-full ${gs.over ? "bg-red-500" : gs.pct >= 85 ? "bg-amber-500" : "bg-blue-500"}`} style={{ width: `${gs.pct}%` }} /></div>
-              <p className={`mt-1.5 text-xs font-bold ${gs.over ? "text-red-600 dark:text-red-400" : "text-gray-500"}`}>
-                {gs.over ? `Passou ${money(brl(-gs.left))} da meta de ${money(brl(goal ?? 0))}` : `Ainda cabem ${money(brl(gs.left))} da meta de ${money(brl(goal ?? 0))}`}
-              </p>
+      {step === 1 && (
+        <>
+          <p className="text-sm text-gray-500 mb-3">Escreva ou fale o que precisa comprar. Não precisa de preço nem de peso.</p>
+          {addForm("Ex.: arroz, feijão, 2 leites")}
+          {suggestions.length > 0 && (
+            <div className="flex gap-2 flex-wrap mb-4" aria-label="Sugestões">
+              {suggestions.map((s) => (
+                <button key={s} onClick={() => addName(s)} className="rounded-full border border-white/70 dark:border-white/5 bg-white/60 dark:bg-[#161616] px-3 py-1.5 text-xs font-bold text-gray-600 dark:text-gray-300">+ {s}</button>
+              ))}
             </div>
           )}
-          <button onClick={() => openFinish()} className={btnCls + " w-full"}><ShoppingCart size={18} /> Finalizar compra</button>
-        </div>
+          <Card className="!p-2 md:!p-3">
+            {loading ? <Empty>Carregando...</Empty> : items.length === 0 ? <Empty>Sua lista está vazia.</Empty> : (
+              <ul>
+                {[...items].sort((a, b) => a.position - b.position).map((i) => (
+                  <li key={i.id} className="flex items-center gap-3 px-2 py-2.5 border-b last:border-b-0 border-gray-100 dark:border-white/5">
+                    <span className="min-w-0 flex-1 font-bold truncate">{i.name}{quantityLabel(i) && <span className="ml-2 text-xs font-normal text-gray-500">{quantityLabel(i)}</span>}</span>
+                    <button onClick={() => remove(i.id)} aria-label={`Remover ${i.name}`} className="w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500"><Trash2 size={17} /></button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+          <div className="mt-4 flex items-center gap-3 rounded-2xl border border-white/70 dark:border-white/5 bg-white/60 dark:bg-[#161616] px-4 py-3">
+            <label htmlFor="meta" className="text-sm font-bold flex-1">Quanto quero gastar nesta compra</label>
+            <input id="meta" key={goal ?? "none"} className="w-28 rounded-xl border border-white/70 dark:border-white/5 bg-white/70 dark:bg-[#1E1E1E] px-2.5 py-2 text-sm text-right" inputMode="decimal" placeholder="R$ 0,00"
+              defaultValue={goal != null ? String(goal).replace(".", ",") : ""}
+              onBlur={(e) => {
+                const raw = e.target.value.trim();
+                const v = raw === "" ? null : parseMoney(raw);
+                if (v !== null && (Number.isNaN(v) || v < 0)) return;
+                if (v !== goal) void saveGoal(v);
+              }} />
+          </div>
+          {items.length > 0 && nextBtn(2, "Cheguei no mercado")}
+        </>
+      )}
+
+      {step === 2 && (
+        <>
+          <p className="text-sm text-gray-500 mb-3">Toque no que já pegou. <span className="font-bold text-blue-600 dark:text-blue-400">Azul</span> está no carrinho, <span className="font-bold text-red-600 dark:text-red-400">vermelho</span> ainda falta. O preço é opcional.</p>
+          <Card className="!p-2 md:!p-3">
+            {loading ? <Empty>Carregando...</Empty> : sorted.length === 0 ? <Empty>Sua lista está vazia. Volte em Planejar.</Empty> : (
+              <ul>
+                {sorted.map((i) => (
+                  <li key={i.id} className={`flex items-center gap-3 px-2 py-1.5 border-b last:border-b-0 border-gray-100 dark:border-white/5 border-l-4 rounded-l-lg ${i.checked ? "border-l-blue-500 bg-blue-500/5" : "border-l-red-500 bg-red-500/5"}`}>
+                    <button onClick={() => toggle(i)} aria-pressed={i.checked} aria-label={`${i.checked ? "Desmarcar" : "Marcar"} ${i.name}`}
+                      className={`w-11 h-11 shrink-0 rounded-full flex items-center justify-center border-2 transition-colors ${i.checked ? "bg-blue-500 border-blue-500 text-white" : "border-red-300 dark:border-red-500/40 text-transparent"}`}>
+                      <Check size={20} />
+                    </button>
+                    <div className="min-w-0 flex-1">
+                      <p className={`font-bold truncate ${i.checked ? "text-blue-600 dark:text-blue-400" : "text-red-600 dark:text-red-400"}`}>{i.name}{i.extra && <span className="ml-2 rounded-full bg-amber-100 dark:bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300">fora da lista</span>}</p>
+                      {quantityLabel(i) && <p className="text-xs text-gray-500">{quantityLabel(i)}</p>}
+                    </div>
+                    <input
+                      key={`${i.id}-${i.est_price ?? ""}`}
+                      className="w-24 rounded-xl border border-white/70 dark:border-white/5 bg-white/70 dark:bg-[#1E1E1E] px-2.5 py-2 text-sm text-right"
+                      inputMode="decimal" placeholder="Preço" aria-label={`Preço de ${i.name}`}
+                      defaultValue={i.est_price != null ? String(i.est_price).replace(".", ",") : ""}
+                      onBlur={(e) => {
+                        const raw = e.target.value.trim();
+                        const v = raw === "" ? null : parseMoney(raw);
+                        if (v !== null && (Number.isNaN(v) || v < 0)) return;
+                        if (v !== i.est_price) patch(i.id, { est_price: v });
+                      }}
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+          <div className="mt-4">{addForm("Pegou algo que não estava na lista?")}</div>
+          <div className="sticky bottom-20 md:bottom-4 mt-2 rounded-[28px] border border-white/80 dark:border-white/5 bg-white/90 dark:bg-[#161616] backdrop-blur-xl shadow-lg p-4">
+            <div className="flex items-end justify-between gap-3">
+              <div><p className="text-[11px] font-bold text-blue-600 dark:text-blue-400">No carrinho ({totals.checked}/{totals.total})</p><p className="text-2xl font-extrabold">{money(brl(totals.cart))}</p></div>
+              {goal != null && <p className="text-xs font-bold text-gray-500 text-right">Meta<br /><span className="text-base text-gray-900 dark:text-white">{money(brl(goal))}</span></p>}
+            </div>
+            {gs && (
+              <div className="mt-2" role="status">
+                <div className="h-2.5 w-full rounded-full bg-gray-200 dark:bg-[#262626] overflow-hidden"><div className={`h-full rounded-full ${gs.over ? "bg-red-500" : gs.pct >= 85 ? "bg-amber-500" : "bg-blue-500"}`} style={{ width: `${gs.pct}%` }} /></div>
+                <p className={`mt-1.5 text-xs font-bold ${gs.over ? "text-red-600 dark:text-red-400" : "text-gray-500"}`}>{gs.over ? `Passou ${money(brl(-gs.left))} da meta` : `Ainda cabem ${money(brl(gs.left))}`}</p>
+              </div>
+            )}
+            {nextBtn(3, "Passei no caixa")}
+          </div>
+        </>
+      )}
+
+      {step === 3 && (
+        <>
+          <label className={`flex flex-col items-center gap-2 rounded-[28px] border-2 border-dashed border-brand-dark/30 dark:border-white/15 px-4 py-8 text-center ${reading ? "opacity-60" : "cursor-pointer hover:bg-brand-dark/5 dark:hover:bg-[#1E1E1E]"}`}>
+            {reading ? <LoaderCircle size={32} className="animate-spin text-brand-dark dark:text-brand-soft" /> : <Camera size={32} className="text-brand-dark dark:text-brand-soft" />}
+            <span className="text-base font-extrabold">{reading ? "Lendo a nota..." : receipt ? "Tirar outra foto" : "Tirar foto da nota fiscal"}</span>
+            <span className="text-xs text-gray-500">A nota inteira, reta e com boa luz. Eu leio os produtos e os preços.</span>
+            <input type="file" accept="image/*" capture="environment" className="hidden" disabled={reading} onChange={(e) => { void readReceipt(e.target.files?.[0]); e.target.value = ""; }} />
+          </label>
+
+          {receipt && (
+            <Card className="mt-4">
+              <h2 className="text-lg font-extrabold">O que você comprou{receipt.store ? ` · ${receipt.store}` : ""}</h2>
+              <p className="text-xs text-gray-500 mb-2">Confira: a leitura por foto pode errar. Toque no X para tirar uma linha errada.</p>
+              <ul className="divide-y divide-gray-100 dark:divide-white/5">
+                {receipt.items.map((r, k) => (
+                  <li key={`${r.name}-${k}`} className="flex items-center gap-2 py-2 text-sm">
+                    <span className="min-w-0 flex-1 truncate">{r.name}</span>
+                    <span className="shrink-0 font-bold">{money(brl(r.total))}</span>
+                    <button aria-label={`Tirar ${r.name}`} onClick={() => setReceipt({ ...receipt, items: receipt.items.filter((_, j) => j !== k) })} className="text-gray-400 hover:text-red-500"><X size={15} /></button>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-3"><Label>Total pago</Label><input className={inputCls} inputMode="decimal" value={receipt.total} onChange={(e) => setReceipt({ ...receipt, total: e.target.value })} /></div>
+            </Card>
+          )}
+          {nextBtn(4, receipt ? "Comparar com a minha lista" : "Comparar sem a nota")}
+        </>
+      )}
+
+      {step === 4 && (
+        <Card>
+          <div className="grid grid-cols-2 gap-2 text-center">
+            <div className="rounded-2xl bg-gray-100 dark:bg-[#1E1E1E] p-3"><p className="text-[11px] font-bold text-gray-500">Queria gastar</p><p className="text-xl font-extrabold">{goal != null ? money(brl(goal)) : "—"}</p></div>
+            <div className={`rounded-2xl p-3 ${goalEnd?.over ? "bg-red-500/10" : "bg-emerald-500/10"}`}><p className="text-[11px] font-bold text-gray-500">{receipt ? "Gastei (nota)" : "Gastei (carrinho)"}</p><p className="text-xl font-extrabold">{money(brl(spent))}</p></div>
+          </div>
+          {goalEnd ? (
+            <p className={`mt-3 text-sm font-extrabold ${goalEnd.over ? "text-red-600 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400"}`}>
+              {goalEnd.over ? `Você gastou ${money(brl(-goalEnd.left))} a mais do que planejou.` : goalEnd.left === 0 ? "Você gastou exatamente o que planejou." : `Você gastou ${money(brl(goalEnd.left))} a menos do que planejou.`}
+            </p>
+          ) : <p className="mt-3 text-xs text-gray-500">Sem meta. Na próxima, diga em Planejar quanto quer gastar.</p>}
+
+          <Section title={`Comprou o que planejou (${bought.length})`} tone="text-emerald-700 dark:text-emerald-400">
+            {bought.length === 0 ? <p className="text-xs text-gray-400">Nada.</p> : <ul className="text-sm">{bought.map((b, k) => <li key={k} className="flex justify-between gap-2 py-1"><span className="truncate">{b.name}</span><span className="font-bold shrink-0">{priceTxt(b.price)}</span></li>)}</ul>}
+          </Section>
+          <Section title={`Faltou, não pegou (${missed.length})`} tone="text-red-600 dark:text-red-400">
+            {missed.length === 0 ? <p className="text-xs text-gray-400">Pegou tudo.</p> : <ul className="text-sm">{missed.map((m, k) => <li key={k} className="py-1">{m}</li>)}</ul>}
+          </Section>
+          <Section title={`Acrescentou, não estava na lista (${added.length})`} tone="text-amber-700 dark:text-amber-400">
+            {added.length === 0 ? <p className="text-xs text-gray-400">Nada a mais.</p> : <ul className="text-sm">{added.map((a, k) => <li key={k} className="flex justify-between gap-2 py-1"><span className="truncate">{a.name}</span><span className="font-bold shrink-0">{priceTxt(a.price)}</span></li>)}</ul>}
+          </Section>
+          {left !== null && <p className="mt-4 text-xs text-gray-500">{left < 0 ? `Você já passou ${money(brl(-left))} do limite de Alimentação deste mês.` : `Ainda pode gastar ${money(brl(left))} em Alimentação este mês.`}</p>}
+
+          <button onClick={() => openFinish(Boolean(receipt))} className={btnCls + " w-full mt-5"}><ShoppingCart size={18} /> Lançar como despesa</button>
+          <p className="text-[11px] text-gray-500 mt-2 text-center">O que você não pegou passa para a próxima lista.</p>
+        </Card>
       )}
 
       {finishing && (

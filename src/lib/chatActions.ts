@@ -13,7 +13,7 @@ export const CHAT_PAGES = {
   limites: { path: '/limites', label: 'Limites' },
   contas_a_pagar: { path: '/contas', label: 'Contas a pagar e receber' },
   dividas: { path: '/dividas', label: 'Dívidas' },
-  comprar: { path: '/comprar', label: 'Lista de compras' },
+  comprar: { path: '/comprar', label: 'Supermercado' },
   objetivos: { path: '/metas', label: 'Objetivos' },
   reserva: { path: '/reserva', label: 'Reserva' },
   investimentos: { path: '/investimentos', label: 'Investimentos' },

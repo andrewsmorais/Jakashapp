@@ -296,7 +296,7 @@ export function ShiftForm({ supabase, userId, vehicles, editing, lastUsed, onSav
       <Card className="space-y-3">
         <p className="font-extrabold">Resultado do turno</p>
         <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 p-3"><p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">Ganhos</p><p className="font-extrabold">{brl(r.earnings)}</p></div>
+          <div className="rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 p-3"><p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">Lucro bruto</p><p className="font-extrabold">{brl(r.earnings)}</p></div>
           <div className="rounded-2xl bg-red-50 dark:bg-red-500/10 p-3"><p className="text-[11px] font-bold text-red-600 dark:text-red-300">Despesas</p><p className="font-extrabold">{brl(r.expenses)}</p></div>
           <div className="rounded-2xl bg-brand-dark/10 dark:bg-brand-vivid/20 p-3"><p className="text-[11px] font-bold text-brand-dark dark:text-brand-soft">Lucro líquido</p><p className={`font-extrabold ${r.net < 0 ? "text-red-600" : ""}`}>{brl(r.net)}</p></div>
         </div>

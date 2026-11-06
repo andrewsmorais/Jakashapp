@@ -87,7 +87,7 @@ function TurnoCard({ s, vehicle, onEdit, onDelete, onLaunch }: { s: Shift; vehic
 
       <div className="grid grid-cols-3 gap-2 text-center">
         <div className="rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 p-2.5">
-          <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">Ganhos</p>
+          <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">Lucro bruto</p>
           <p className="font-extrabold text-emerald-700 dark:text-emerald-300">{brl(r.earnings)}</p>
           {s.tips > 0 && <p className="text-[10px] text-gray-500">inclui {brl(s.tips)} de gorjeta</p>}
         </div>

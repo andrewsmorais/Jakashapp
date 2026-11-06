@@ -3,13 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSupabase } from "@/lib/useSupabase";
 import { brl, formatDateBR, todayISO } from "@/lib/format";
-import { SHIFT_COLUMNS, VEHICLE_COLUMNS, fuelCost, normalizeShift, normalizeVehicle, shiftMetrics, type Shift, type Vehicle } from "@/lib/driver";
+import { SHIFT_COLUMNS, VEHICLE_COLUMNS, normalizeShift, normalizeVehicle, shiftMetrics, type Shift, type Vehicle } from "@/lib/driver";
 import { platformOf } from "@/lib/driverPlatforms";
 import { ShiftForm, type LastUsed } from "@/components/driver/ShiftForm";
 import { ResultsPanel, type Period } from "@/components/driver/ResultsPanel";
 import { VehiclesPanel } from "@/components/driver/VehiclesPanel";
 import { TurnosPanel } from "@/components/driver/TurnosPanel";
-import { BackTitle, Card, Empty, ErrorNote, Label, Toggle, btnCls, btnGhostCls, inputCls } from "@/components/ui/page";
+import { BackTitle, Card, Empty, ErrorNote, Label, btnCls, btnGhostCls, inputCls } from "@/components/ui/page";
 
 type Tab = "turnos" | "resultados" | "carros";
 type Preset = "7d" | "mes" | "mes_passado" | "30d" | "custom";
@@ -179,15 +179,16 @@ export default function MotoristaPage() {
   );
 }
 
-// Manda o dia para o financeiro: o ganho vira receita e, se quiser, o combustível estimado vira despesa.
+// Manda o dia para o financeiro (o total do app). Duas formas:
+//  "net":   uma receita com o lucro líquido (se der prejuízo, vira uma despesa com o valor do prejuízo);
+//  "split": o lucro bruto como receita e as despesas do turno como despesa (o saldo no app fica igual ao lucro líquido).
 function LaunchDialog({ supabase, userId, shift, onClose }: { supabase: ReturnType<typeof useSupabase>["supabase"]; userId: string; shift: Shift; onClose: (done: boolean) => void }) {
   const [accounts, setAccounts] = useState<Acc[]>([]);
   const [accountId, setAccountId] = useState("");
-  const [withFuel, setWithFuel] = useState(false);
+  const [mode, setMode] = useState<"net" | "split">("net");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const m = shiftMetrics(shift);
-  const fuel = fuelCost(shift.km, shift.efficiency, shift.fuel_price);
   const names = Array.from(new Set(shift.earnings.map((e) => platformOf(e.platform).name))).join(", ");
 
   useEffect(() => {
@@ -201,37 +202,59 @@ function LaunchDialog({ supabase, userId, shift, onClose }: { supabase: ReturnTy
   async function go() {
     setBusy(true); setError(null);
     const dm = formatDateBR(shift.date).slice(0, 5);
-    const inc = await supabase.from("transactions").insert({
-      user_id: userId, description: `Corridas ${dm}${names ? ` (${names})` : ""}`.slice(0, 120), amount: m.gross, type: "income", date: shift.date,
-      category_id: null, account_id: accountId || null, origin: "manual", is_business: false,
-    }).select("id").single();
-    if (inc.error || !inc.data) { setBusy(false); setError("Não foi possível lançar o ganho."); return; }
+    const label = `${dm}${names ? ` (${names})` : ""}`;
+    const base = { user_id: userId, date: shift.date, account_id: accountId || null, origin: "manual", is_business: false };
+    let incomeId: string | null = null;
     let expenseId: string | null = null;
-    if (withFuel && fuel > 0) {
-      const cat = await supabase.from("categories").select("id").eq("is_default", true).is("user_id", null).ilike("name", "Combustível").limit(1).maybeSingle();
-      const exp = await supabase.from("transactions").insert({
-        user_id: userId, description: `Combustível ${dm} (estimado)`, amount: fuel, type: "expense", date: shift.date,
-        category_id: (cat.data as { id: string } | null)?.id ?? null, account_id: accountId || null, origin: "manual", is_business: false,
+    if (mode === "net") {
+      if (m.net === 0) { setBusy(false); setError("O lucro líquido deste turno é zero: não há o que lançar."); return; }
+      const loss = m.net < 0;
+      const r = await supabase.from("transactions").insert({
+        ...base, description: `${loss ? "Prejuízo das corridas" : "Lucro das corridas"} ${label}`.slice(0, 120), amount: Math.abs(m.net), type: loss ? "expense" : "income", category_id: null,
       }).select("id").single();
-      if (!exp.error && exp.data) expenseId = (exp.data as { id: string }).id;
+      if (r.error || !r.data) { setBusy(false); setError("Não foi possível lançar."); return; }
+      if (loss) expenseId = (r.data as { id: string }).id; else incomeId = (r.data as { id: string }).id;
+    } else {
+      if (m.gross > 0) {
+        const inc = await supabase.from("transactions").insert({ ...base, description: `Corridas ${label}`.slice(0, 120), amount: m.gross, type: "income", category_id: null }).select("id").single();
+        if (inc.error || !inc.data) { setBusy(false); setError("Não foi possível lançar o lucro bruto."); return; }
+        incomeId = (inc.data as { id: string }).id;
+      }
+      if (m.expenses > 0) {
+        const exp = await supabase.from("transactions").insert({ ...base, description: `Despesas das corridas ${label}`.slice(0, 120), amount: m.expenses, type: "expense", category_id: null }).select("id").single();
+        if (exp.error || !exp.data) { setBusy(false); setError(incomeId ? "Lancei o lucro bruto, mas não consegui lançar as despesas." : "Não foi possível lançar as despesas."); if (!incomeId) return; }
+        else expenseId = (exp.data as { id: string }).id;
+      }
     }
-    await supabase.from("driver_shifts").update({ income_tx_id: (inc.data as { id: string }).id, expense_tx_id: expenseId }).eq("id", shift.id);
+    // Marca o turno como lançado (o botão some e o turno mostra "Lançado no financeiro").
+    await supabase.from("driver_shifts").update({ income_tx_id: incomeId ?? expenseId, expense_tx_id: expenseId }).eq("id", shift.id);
     window.dispatchEvent(new Event("jakash:changed"));
     setBusy(false);
     onClose(true);
   }
 
+  const opt = (k: "net" | "split", title: string, desc: string) => (
+    <button type="button" onClick={() => setMode(k)} aria-pressed={mode === k}
+      className={`w-full text-left rounded-2xl border-2 px-4 py-3 ${mode === k ? "border-brand-dark dark:border-brand-vivid bg-brand-dark/5" : "border-gray-200 dark:border-white/10"}`}>
+      <span className="block text-sm font-extrabold">{title}</span>
+      <span className="block text-xs text-gray-500">{desc}</span>
+    </button>
+  );
+
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => onClose(false)}>
       <div onClick={(e) => e.stopPropagation()} className="w-full md:max-w-md bg-white dark:bg-[#161616] rounded-t-[32px] md:rounded-[32px] p-6 space-y-4">
         <h2 className="text-xl font-extrabold">Lançar no financeiro</h2>
-        <p className="text-sm text-gray-500">O ganho de {formatDateBR(shift.date)} entra como receita de <strong>{brl(m.gross)}</strong>.</p>
+        <p className="text-sm text-gray-500">Turno de {formatDateBR(shift.date)}: lucro bruto <strong>{brl(m.gross)}</strong>, despesas <strong>{brl(m.expenses)}</strong>, lucro líquido <strong>{brl(m.net)}</strong>.</p>
+        <div className="space-y-2">
+          {opt("net", `Só o lucro líquido (${brl(m.net)})`, m.net < 0 ? "Deu prejuízo: entra como uma despesa." : "Entra uma receita com o que sobrou no bolso.")}
+          {opt("split", "Lucro bruto e despesas separados", `Receita de ${brl(m.gross)} e despesa de ${brl(m.expenses)}. O saldo fica igual ao lucro líquido.`)}
+        </div>
         <div><Label>Conta onde o dinheiro caiu</Label>
           <select className={inputCls} value={accountId} onChange={(e) => setAccountId(e.target.value)}>
             <option value="">Sem conta</option>
             {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
           </select></div>
-        {fuel > 0 && <Toggle checked={withFuel} onChange={setWithFuel} label={`Lançar também o combustível (${brl(fuel)})`} hint="Deixe desligado se você já lança os abastecimentos, para não contar duas vezes." />}
         <ErrorNote message={error} />
         <div className="flex gap-2">
           <button type="button" onClick={() => onClose(false)} className={btnGhostCls + " flex-1 !py-3"}>Cancelar</button>

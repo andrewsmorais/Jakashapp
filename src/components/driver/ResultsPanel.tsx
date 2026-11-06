@@ -53,7 +53,7 @@ export function ResultsPanel({ shifts, vehicles, period, platform, vehicleId, on
       {sum.shifts === 0 ? <Card><Empty>Nenhum turno registrado neste período{platform ? " nesta plataforma" : ""}.</Empty></Card> : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Card className="!p-4 !bg-emerald-50 dark:!bg-emerald-500/10"><p className="text-xs font-bold text-emerald-700 dark:text-emerald-300">Ganho bruto</p><p className="text-2xl font-extrabold">{brl(t.gross)}</p><p className="text-xs text-gray-500">{perH(t.grossPerHour)} · {perKm(t.grossPerKm)}</p></Card>
+            <Card className="!p-4 !bg-emerald-50 dark:!bg-emerald-500/10"><p className="text-xs font-bold text-emerald-700 dark:text-emerald-300">Lucro bruto</p><p className="text-2xl font-extrabold">{brl(t.gross)}</p><p className="text-xs text-gray-500">{perH(t.grossPerHour)} · {perKm(t.grossPerKm)}</p></Card>
             <Card className="!p-4 !bg-red-50 dark:!bg-red-500/10"><p className="text-xs font-bold text-red-600 dark:text-red-300">Despesas</p><p className="text-2xl font-extrabold">{brl(t.expenses)}</p><p className="text-xs text-gray-500">Despesa por km: {perKm(t.costPerKm)}</p></Card>
             <Card className="!p-4 !bg-brand-dark/10 dark:!bg-brand-vivid/20"><p className="text-xs font-bold text-brand-dark dark:text-brand-soft">Lucro líquido</p><p className={`text-2xl font-extrabold ${t.net < 0 ? "text-red-600" : ""}`}>{brl(t.net)}</p><p className="text-xs text-gray-500">{perH(t.netPerHour)} · {perKm(t.netPerKm)}</p></Card>
           </div>

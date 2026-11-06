@@ -59,7 +59,7 @@ function Report() {
           <p className="text-gray-600">{name ? `${name} · ` : ""}{formatDateBR(from)} a {formatDateBR(to)} · {platform ? platformOf(platform).name : "Todas as plataformas"}{carro && vName.get(carro) ? ` · ${vName.get(carro)}` : ""}</p>
 
           <div className="grid grid-cols-3 gap-3 mt-5">
-            <div className="rounded-xl border-2 border-emerald-600 p-3"><p className="text-xs font-bold text-emerald-700 uppercase">Ganho bruto</p><p className="text-2xl font-extrabold">{brl(t.gross)}</p></div>
+            <div className="rounded-xl border-2 border-emerald-600 p-3"><p className="text-xs font-bold text-emerald-700 uppercase">Lucro bruto</p><p className="text-2xl font-extrabold">{brl(t.gross)}</p></div>
             <div className="rounded-xl border-2 border-red-600 p-3"><p className="text-xs font-bold text-red-700 uppercase">Despesas</p><p className="text-2xl font-extrabold">{brl(t.expenses)}</p></div>
             <div className="rounded-xl border-2 border-gray-900 bg-gray-900 text-white p-3"><p className="text-xs font-bold uppercase">Lucro líquido</p><p className="text-2xl font-extrabold">{brl(t.net)}</p></div>
           </div>
@@ -78,7 +78,7 @@ function Report() {
             <>
               <h2 className="font-extrabold mt-6 mb-2">Por plataforma</h2>
               <table className="w-full border-collapse text-xs">
-                <thead><tr className="bg-gray-100">{["Plataforma", "Dias", "Ganho bruto", "Despesas", "Lucro líquido", "R$/hora", "R$/km"].map((h) => <th key={h} className="border border-gray-300 px-2 py-1 text-left">{h}</th>)}</tr></thead>
+                <thead><tr className="bg-gray-100">{["Plataforma", "Dias", "Lucro bruto", "Despesas", "Lucro líquido", "R$/hora", "R$/km"].map((h) => <th key={h} className="border border-gray-300 px-2 py-1 text-left">{h}</th>)}</tr></thead>
                 <tbody>{sum.byPlatform.map((p) => (
                   <tr key={p.platform}><td className="border border-gray-300 px-2 py-1">{platformOf(p.platform).name}</td><td className="border border-gray-300 px-2 py-1">{p.days}</td><td className="border border-gray-300 px-2 py-1">{brl(p.metrics.gross)}</td><td className="border border-gray-300 px-2 py-1">{brl(p.metrics.expenses)}</td><td className="border border-gray-300 px-2 py-1 font-bold">{brl(p.metrics.net)}</td><td className="border border-gray-300 px-2 py-1">{p.estimatedHours ? "≈ " : ""}{perH(p.metrics.grossPerHour)}</td><td className="border border-gray-300 px-2 py-1">{perKm(p.metrics.grossPerKm)}</td></tr>
                 ))}</tbody>

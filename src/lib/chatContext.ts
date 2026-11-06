@@ -1,6 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { cardUsed, dueDateFor, invoiceMonthFor, type InvoiceRow } from '@/lib/cards';
 import { limitForYear, limitStatus, planLimit, profitSummary, toSummary } from '@/lib/mei';
+import { SHIFT_COLUMNS, normalizeShift, summarize } from '@/lib/driver';
+import { listTotals, type ShopItem } from '@/lib/shopping';
 import { coreOnlyFor, hiddenIds, type CatFull, type VisibilityRow } from '@/lib/categoryVisibility';
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -26,7 +28,7 @@ type Tx = { description: string; amount: number | string; type: 'income' | 'expe
 // `who` (opcional): para a Jaki só sugerir as categorias que a pessoa deixou à mostra em Categorias.
 export async function buildChatContext(db: SupabaseClient, today: string, who?: { userId: string; createdAt?: string | null }) {
   const { start, end, prevStart, in30 } = bounds(today);
-  const [c, t, a, b, bd, g, d, k, s, iv, pf, vis] = await Promise.all([
+  const [c, t, a, b, bd, g, d, k, s, iv, pf, vis, ds, sl] = await Promise.all([
     db.from('categories').select('id,name,type,parent_id,is_default,user_id'),
     db.from('transactions').select('description,amount,type,date,category_id').gte('date', prevStart).lt('date', end).order('date', { ascending: false }).limit(1500),
     db.rpc('account_balances'),
@@ -39,6 +41,8 @@ export async function buildChatContext(db: SupabaseClient, today: string, who?: 
     db.from('investments').select('name,kind,invested,current_value').eq('archived', false).limit(15),
     db.from('profiles').select('usage_type,mei_activity,mei_opened_on,mei_annual_limit').maybeSingle(),
     who ? db.from('category_visibility').select('category_id,hidden') : Promise.resolve({ data: [], error: null }),
+    db.from('driver_shifts').select(SHIFT_COLUMNS).gte('date', start).lt('date', end).limit(400),
+    db.from('shopping_lists').select('id,name,budget').eq('status', 'open').eq('is_business', false).order('created_at').limit(1),
   ]);
 
   const cats = (c.data ?? []) as Cat[];
@@ -101,6 +105,32 @@ export async function buildChatContext(db: SupabaseClient, today: string, who?: 
   const isMei = prof?.usage_type === 'empresarial' || prof?.usage_type === 'ambos';
   const mei = isMei && prof ? await meiContext(db, today, prof) : null;
 
+  // Motorista de app: turnos do mês (só aparece para quem registrou turno).
+  const shifts = ds.error ? [] : ((ds.data ?? []) as Record<string, unknown>[]).map(normalizeShift);
+  const drv = shifts.length ? summarize(shifts) : null;
+  const motorista = drv ? {
+    turnos_no_mes: drv.shifts, dias_trabalhados: drv.days, corridas: drv.total.trips, km: drv.total.km, horas: drv.total.hours,
+    lucro_bruto: drv.total.gross, despesas: drv.total.expenses, lucro_liquido: drv.total.net,
+    lucro_liquido_por_hora: drv.total.netPerHour, lucro_liquido_por_km: drv.total.netPerKm,
+    por_plataforma: drv.byPlatform.map((p) => ({ plataforma: p.platform, lucro_bruto: p.metrics.gross, lucro_liquido: p.metrics.net })),
+  } : null;
+
+  // Supermercado: a lista aberta (o que falta pegar e a meta da compra).
+  const list = sl.error ? null : ((sl.data ?? []) as { id: string; name: string; budget: number | string | null }[])[0] ?? null;
+  let supermercado = null;
+  if (list) {
+    const it = await db.from('shopping_items').select('name,quantity,unit,est_price,checked').eq('list_id', list.id).limit(200);
+    const rows = ((it.data ?? []) as Omit<ShopItem, 'id' | 'list_id' | 'created_by' | 'position'>[]).map((x) => ({ ...x, quantity: Number(x.quantity), est_price: x.est_price == null ? null : Number(x.est_price) }));
+    if (rows.length) {
+      const tt = listTotals(rows as ShopItem[]);
+      supermercado = {
+        meta_de_gasto: list.budget == null ? null : r2(Number(list.budget)),
+        itens_na_lista: tt.total, ja_no_carrinho: tt.checked, total_do_carrinho: tt.cart,
+        faltam_pegar: rows.filter((x) => !x.checked).slice(0, 30).map((x) => x.name),
+      };
+    }
+  }
+
   return {
     hoje: today,
     CATEGORIAS: { despesa: roots('expense'), receita: roots('income') },
@@ -118,6 +148,8 @@ export async function buildChatContext(db: SupabaseClient, today: string, who?: 
       .map((x) => ({ nome: x.name, saldo_devedor: r2(Number(x.balance)), juros_ao_mes_pct: Number(x.monthly_rate) })),
     cartoes_de_credito: cards,
     investimentos: investments,
+    ...(motorista ? { motorista_de_app_no_mes: motorista } : {}),
+    ...(supermercado ? { supermercado_lista_aberta: supermercado } : {}),
     ...(mei ? { mei } : {}),
   };
 }
